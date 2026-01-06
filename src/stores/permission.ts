@@ -58,9 +58,9 @@ export const usePermissionStore = defineStore('permission', {
         ): RouteRecordRaw[] {
           const mapMenu = (menu: MenuItem): RouteRecordRaw => {
             const route: unknown = {
-              path: menu.path,
+              path: menu.routePath,
               name: menu.name,
-              component: componentResolver(menu.type, menu.name),
+              component: componentResolver(menu.type, menu.path),
               meta: menu.meta || {},
               ...(menu.children?.length ? { children: menu.children.map(mapMenu) } : {}),
               ...(menu.redirect ? { redirect: menu.redirect } : {}),

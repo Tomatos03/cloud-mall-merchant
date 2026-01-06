@@ -1,0 +1,215 @@
+<template>
+    <div class="p-6 bg-[#f4f7fe] min-h-full">
+        <div class="max-w-5xl mx-auto">
+            <!-- 极简注水进度条 (水管风格) -->
+            <div class="mb-12 relative px-10">
+                <!-- 背景连接线 (水管) -->
+                <div class="absolute top-4 left-14 right-14 h-1 bg-gray-200 rounded-full overflow-hidden">
+                    <!-- 动态注水效果 -->
+                    <div
+                        class="h-full bg-blue-500 transition-all duration-700 ease-out"
+                        :style="{ width: `${(publishStore.activeStep / 2) * 100}%` }"
+                    ></div>
+                </div>
+
+                <!-- 步骤节点 -->
+                <div class="relative flex justify-between items-center">
+                    <div
+                        v-for="(step, index) in ['选择发布方式', '填写商品信息', '发布完成']"
+                        :key="index"
+                        class="flex flex-col items-center gap-3"
+                    >
+                        <div
+                            class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-500 z-10"
+                            :class="[
+                                publishStore.activeStep === index ? 'border-blue-600 bg-white text-blue-600 shadow-[0_0_15px_rgba(59,130,246,0.3)] scale-110' :
+                                publishStore.activeStep > index ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-200 bg-white text-gray-400'
+                            ]"
+                        >
+                            <span v-if="publishStore.activeStep <= index">{{ index + 1 }}</span>
+                            <el-icon v-else size="14"><Check /></el-icon>
+                        </div>
+                        <span
+                            class="text-[11px] font-bold transition-colors duration-300"
+                            :class="publishStore.activeStep >= index ? 'text-gray-700' : 'text-gray-400'"
+                        >{{ step }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 步骤内容区域 -->
+            <div class="step-content">
+                <!-- 第一步：选择发布方式 -->
+                <Step1
+                    v-if="publishStore.activeStep === 0"
+                    @select="handleSelectType"
+                />
+
+                <!-- 第二步：填写详细信息 -->
+                <Step2
+                    v-else-if="publishStore.activeStep === 1"
+                    :formData="publishStore.formData"
+                    :categoryList="publishStore.categoryList"
+                    :unitList="publishStore.unitList"
+                    v-model:specifications="specifications"
+                    v-model:skuList="skuList"
+                    v-model:displayImages="displayImages"
+                    v-model:detailImages="detailImages"
+                    :isReadonly="publishStore.isReadonly"
+                    :submitting="publishStore.submitting"
+                    @prev="handlePrev"
+                    @submit="submitForm"
+                />
+
+                <!-- 第三步：发布成功 -->
+                <Step3
+                    v-else-if="publishStore.activeStep === 2"
+                    :isEdit="!!publishStore.formData.id"
+                    @reset="resetForm"
+                />
+            </div>
+        </div>
+    </div>
+</template>
+
+<script setup lang="ts">
+    import { computed, onMounted, watch } from 'vue'
+    import { useRoute, useRouter } from 'vue-router'
+    import { useUserStore } from '@/stores/user'
+    import { useGoodsPublishStore } from '@/stores/goodsPublish'
+    import { ElMessage } from 'element-plus'
+    import { Check } from '@element-plus/icons-vue'
+    import Step1 from './model/Step1.vue'
+    import Step2 from './model/Step2.vue'
+    import Step3 from './model/Step3.vue'
+
+    const router = useRouter()
+    const route = useRoute()
+    const userStore = useUserStore()
+    const publishStore = useGoodsPublishStore()
+
+    // 局部状态同步
+    const displayImages = computed({
+        get: () => publishStore.displayImages,
+        set: (val) => publishStore.setDisplayImages(val),
+    })
+
+    const detailImages = computed({
+        get: () => publishStore.detailImages,
+        set: (val) => publishStore.setDetailImages(val),
+    })
+
+    const specifications = computed({
+        get: () => publishStore.specifications,
+        set: (val) => publishStore.setSpecifications(val),
+    })
+
+    const skuList = computed({
+        get: () => publishStore.skuList,
+        set: (val) => publishStore.setSkuList(val),
+    })
+
+    const handleSelectType = async (type: 'new' | 'template') => {
+        if (type === 'template') {
+            ElMessage.info('模板功能开发中，已为您切换至普通发布')
+        }
+        await publishStore.initBaseData()
+        publishStore.setActiveStep(1)
+    }
+
+    const handlePrev = async () => {
+        if (publishStore.formData.id) {
+            router.back()
+        } else {
+            publishStore.setActiveStep(0)
+        }
+    }
+
+    const resetForm = () => {
+        const storeId = userStore.storeId || 'store001'
+        const storeName = userStore.storeName || '示例店铺'
+        publishStore.resetFormData(storeId, storeName)
+        publishStore.setActiveStep(0)
+    }
+
+    const submitForm = async () => {
+        if (publishStore.displayImages.length === 0) {
+            return ElMessage.warning('请至少上传一张商品展示图')
+        }
+
+        if (!publishStore.hasValidSpec) {
+            return ElMessage.warning('请至少配置一个有效的规格组合')
+        }
+
+        publishStore.setSubmitting(true)
+
+        try {
+            const { getMerchantApi } = await import('@/api/client')
+            const api = getMerchantApi()
+            const payload = publishStore.getSubmitPayload()
+
+            if (payload.id) {
+                await api.updateGoods(payload)
+                ElMessage.success('商品更新成功')
+            } else {
+                await api.addGoods(payload)
+                ElMessage.success('商品发布成功')
+            }
+
+            publishStore.setActiveStep(2)
+        } finally {
+            publishStore.setSubmitting(false)
+        }
+    }
+
+    const initializeStore = async () => {
+        const storeId = userStore.storeId || 'store001'
+        const storeName = userStore.storeName || '示例店铺'
+
+        // 设置店铺信息
+        publishStore.setStoreInfo(storeId, storeName)
+
+        // 初始化基础数据
+        await publishStore.initBaseData()
+
+        // 如果是编辑模式，加载商品数据
+        const goodsId = route.query.id as string
+        if (goodsId) {
+            publishStore.setReadonly(route.query.readonly === 'true')
+            await publishStore.loadGoodsData(goodsId)
+            publishStore.setActiveStep(1)
+        }
+    }
+
+    onMounted(async () => {
+        await initializeStore()
+    })
+
+    // 监听路由参数变化，支持刷新时重新加载
+    watch(
+        () => route.query.id,
+        async (newId) => {
+            if (newId && newId !== publishStore.currentGoodsId) {
+                publishStore.setReadonly(route.query.readonly === 'true')
+                await publishStore.loadGoodsData(newId as string)
+            }
+        }
+    )
+</script>
+
+<style scoped>
+    .step-content {
+        animation: slide-up 0.4s ease-out;
+    }
+
+    @keyframes slide-up {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>

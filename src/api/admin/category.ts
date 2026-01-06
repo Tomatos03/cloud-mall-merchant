@@ -32,13 +32,6 @@ export function deleteCategory(id: string) {
     return http.post(`${PREFIX}/category/delete/${id}`)
 }
 
-/**
- * 获取分类树（用于级联选择）
- */
-export function getCategoryTree() {
-    return http.get<CategoryItem[]>(`${PREFIX}/category/tree`)
-}
-
 // 通用 API 函数（不关联到特定角色）
 /**
  * 获取分类树/列表（通用）

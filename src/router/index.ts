@@ -3,6 +3,7 @@ import { usePermissionStore } from '@/stores/permission'
 import { createRouter, createWebHistory } from 'vue-router'
 import { initApiClient } from '@/api/client'
 import type { Component } from 'vue'
+import type { MenuItemType } from '@/api/common/menu'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -75,7 +76,13 @@ router.beforeEach(async (to, _from, next) => {
     if (shouldRestoreDynamicRoutes(token, permissionStore, userStore, to)) {
         console.log('[router] 从持久化数据恢复动态路由...')
         await permissionStore.restoreRoutesFromPersist(router, componentResolver)
-        return next({ ...to, replace: true })
+        
+        // 恢复后检查是否匹配成功，避免无限循环
+        const resolved = router.resolve(to)
+        if (resolved.matched.length > 0) {
+            return next({ ...to, replace: true })
+        }
+        // 如果恢复后依然匹配不到，说明该路由确实不存在，将流转到下方的 404 处理
     }
 
     if (shouldRedirectTo404(token, permissionStore, to)) {
@@ -87,12 +94,12 @@ router.beforeEach(async (to, _from, next) => {
 })
 
 export type RouteRawComponentLoader = () => Promise<Component>
-export type ComponentResolver = (type: 'view' | 'layout', name: string) => RouteRawComponentLoader
+export type ComponentResolver = (type: MenuItemType, name: string) => RouteRawComponentLoader | undefined
 
 const viewModules: Record<string, RouteRawComponentLoader> = import.meta.glob('../views/**/index.vue')
 const layoutModules: Record<string, RouteRawComponentLoader> = import.meta.glob('../layout/**/index.vue')
 
-const componentModulesMap = {
+const componentModulesMap: Record<Exclude<MenuItemType, 'parentView'>, { modules: Record<string, RouteRawComponentLoader>; basePath: string }> = {
   view: {
     modules: viewModules,
     basePath: '../views',
@@ -103,9 +110,14 @@ const componentModulesMap = {
   },
 }
 
-export const componentResolver: ComponentResolver = (type, rawName) => {
+export const componentResolver: ComponentResolver = (type, path) => {
+  // parentView 类型仅作为路由容器，不需要对应的组件
+  if (type === 'parentView') {
+    return undefined
+  }
+
   const { modules, basePath } = componentModulesMap[type]
-  const name = (rawName || '').toLowerCase().replace(/^\/+|\/+$/g, '')
+  const name = (path || '').toLowerCase().replace(/^\/+|\/+$/g, '')
 
   const candidates = [
     `${basePath}/${name}/index.vue`,
@@ -118,7 +130,7 @@ export const componentResolver: ComponentResolver = (type, rawName) => {
     if (loader) return loader
   }
 
-  throw new Error(`[componentResolver] Unknown ${type}: ${rawName}`)
+  throw new Error(`[componentResolver] Unknown ${type}: ${path}`)
 }
 
 export default router

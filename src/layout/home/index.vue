@@ -103,7 +103,7 @@
                 <router-view v-slot="{ Component }">
                     <transition name="fade-transform" mode="out-in">
                          <keep-alive>
-                            <component :is="Component" />
+                            <component :is="Component" :key="route.fullPath" />
                          </keep-alive>
                     </transition>
                 </router-view>
@@ -198,14 +198,14 @@
         rawMenus.forEach((item: MenuItem) => {
             if (item.type === 'layout' && item.children && item.children.length > 0) {
                 item.children.forEach((child: MenuItem) => {
-                    const fullPath = resolvePath(item.path, child.path)
+                    const fullPath = resolvePath(item.routePath, child.routePath)
                     const processedChild = { ...child, path: fullPath }
 
                     // 处理子菜单的路径
                     if (child.children && child.children.length > 0) {
                         processedChild.children = child.children.map((grandChild: MenuItem) => ({
                             ...grandChild,
-                            path: resolvePath(fullPath, grandChild.path),
+                            path: resolvePath(fullPath, grandChild.routePath),
                         }))
                     }
                     result.push(processedChild)

@@ -72,7 +72,7 @@
 
                 <template #info="{ row }">
                     <el-tooltip v-if="row.info" :content="row.info" placement="top">
-                        <div class="text-gray-400 text-xs truncate max-w-[150px]">{{ row.info }}</div>
+                        <div class="text-gray-400 text-xs truncate max-w-37.5">{{ row.info }}</div>
                     </el-tooltip>
                     <span v-else class="text-gray-300">-</span>
                 </template>
@@ -113,43 +113,32 @@
             />
         </div>
 
-        <!-- 添加/编辑商品组件 -->
-        <GoodsFormDialog
-            v-model="dialogVisible"
-            :initial-values="(editingGoods as any)"
+        <!-- 商品详情对话框 -->
+        <GoodsDetailDialog
+            v-model="detailVisible"
+            :data="currentGoods"
             :category-list="categoryList"
-            :loading="dialogLoading"
-            :submit-loading="submitLoading"
-            @confirm="handleConfirm"
-            @request-upload="handleUpload"
-        />
-
-        <!-- 查看商品详情组件 -->
-        <GoodsFormDialog
-            v-model="viewDialogVisible"
-            :initial-values="(viewingGoods as any)"
-            :category-list="categoryList"
-            :loading="viewDialogLoading"
-            :submit-loading="false"
-            :is-readonly="true"
-            @confirm="handleConfirm"
-            @request-upload="handleUpload"
         />
     </div>
 </template>
 
 <script setup lang="ts">
     import { ref, onMounted } from 'vue'
+    import { useRouter } from 'vue-router'
     import { Plus, Picture } from '@element-plus/icons-vue'
     import Table from '@/components/table/Table.vue'
-    import GoodsFormDialog from './model/GoodsFormDialog.vue'
-    import { getAdminApi } from '@/api/client'
+    import GoodsDetailDialog from './model/GoodsDetailDialog.vue'
+    import { getApi, getMerchantApi } from '@/api/client'
+    import { getCategoryTree } from '@/api/common/category'
     import { useUserStore } from '@/stores/user'
     import { ElMessage, ElMessageBox } from 'element-plus'
     import { fenToYuan } from '@/utils/price'
     import { getImageURL } from '@/utils/image'
+    import type { GoodsItem } from '@/api/common'
+    import type { CategoryItem } from '@/api/common/category'
 
     const userStore = useUserStore()
+    const router = useRouter()
 
     const columns = [
         { id: '1', label: '商品图片', key: 'img', width: 100 },
@@ -161,43 +150,24 @@
         { id: '7', label: '简介', key: 'info', minWidth: 150 },
     ]
 
-    const data = ref<any[]>([])
+    const data = ref<GoodsItem[]>([])
     const page = ref(1)
     const pageSize = ref(10)
     const total = ref(0)
     const loading = ref(false)
-
-    const dialogVisible = ref(false)
-    const editGoodsId = ref<string | null>(null)
-    const categoryList = ref<any[]>([])
-    const editingGoods = ref<any>(null)
-    const dialogLoading = ref(false)
-    const submitLoading = ref(false)
-
-    const viewDialogVisible = ref(false)
-    const viewingGoods = ref<any>(null)
-    const viewDialogLoading = ref(false)
-
-    const fetchCategoryList = async () => {
-        try {
-            const res = await getAdminApi().fetchCategoryList()
-            categoryList.value = res.data || []
-        } catch (error) {
-            console.error('Failed to fetch categories:', error)
-        }
-    }
+    const detailVisible = ref(false)
+    const currentGoods = ref<GoodsItem | null>(null)
+    const categoryList = ref<CategoryItem[]>([])
 
     const loadData = async () => {
         loading.value = true
         try {
-            const res = await getAdminApi().fetchGoodsPage({
+            const res = await getApi().fetchGoodsPage({
                 page: page.value,
                 pageSize: pageSize.value
             })
             data.value = res.data.records || []
             total.value = Number(res.data.total) || 0
-        } catch (error) {
-            console.error('Failed to load goods:', error)
         } finally {
             loading.value = false
         }
@@ -214,91 +184,59 @@
         loadData()
     }
 
-    const onView = async (row: any) => {
-        viewingGoods.value = { ...row }
-        viewDialogVisible.value = true
+    const loadCategories = async () => {
+        try {
+            const res = await getCategoryTree()
+            categoryList.value = res.data || []
+        } catch (error) {
+            console.error('加载分类失败', error)
+        }
+    }
+
+    const onView = (row: GoodsItem) => {
+        currentGoods.value = row
+        detailVisible.value = true
     }
 
     const onAdd = () => {
-        editGoodsId.value = null
-        editingGoods.value = {
-            name: '',
-            price: 0,
-            inventory: 0,
-            categoryId: '',
-            info: '',
-            img: '',
-            imgList: '',
-            unit: '件',
-            status: true
-        }
-        dialogVisible.value = true
+        router.push('/goods/publish')
     }
 
-    const onEdit = (row: any) => {
-        editGoodsId.value = row.id
-        editingGoods.value = { ...row }
-        dialogVisible.value = true
+    const onEdit = (row: GoodsItem) => {
+        router.push({ path: '/goods/publish', query: { id: row.id } })
     }
 
-    const onDelete = (row: any) => {
+    const onDelete = (row: GoodsItem) => {
         ElMessageBox.confirm('确定要删除该商品吗？', '提示', {
             type: 'warning',
             confirmButtonClass: 'el-button--danger'
         }).then(async () => {
-            try {
-                await getAdminApi().deleteGoods(row.id)
-                ElMessage.success('删除成功')
-                loadData()
-            } catch (error) {
-                ElMessage.error('删除失败')
-            }
+            await getMerchantApi().deleteGoods(row.id)
+            ElMessage.success('删除成功')
+            loadData()
         })
     }
 
-    const handleConfirm = async (formData: any) => {
-        submitLoading.value = true
-        try {
-            if (editGoodsId.value) {
-                await getAdminApi().updateGoods(editGoodsId.value, formData)
-                ElMessage.success('更新成功')
-            } else {
-                await getAdminApi().addGoods(formData)
-                ElMessage.success('添加成功')
-            }
-            dialogVisible.value = false
-            loadData()
-        } catch (error) {
-            ElMessage.error('操作失败')
-        } finally {
-            submitLoading.value = false
-        }
-    }
 
-    const handleUpload = async (file: File) => {
-        // 实现上传逻辑
-    }
 
-    const statusOf = (row: any) => {
+    const statusOf = (row: GoodsItem) => {
         return !!row.status
     }
 
-    const onTogglePublished = async (row: any, val: boolean) => {
+    const onTogglePublished = async (row: GoodsItem & { __publishing?: boolean }, val: boolean) => {
         row.__publishing = true
         try {
-            await getAdminApi().updateGoods(row.id, { ...row, status: val })
+            await getMerchantApi().updateGoods({ ...row, status: val })
             row.status = val
             ElMessage.success(val ? '已上架' : '已下架')
-        } catch (error) {
-            ElMessage.error('操作失败')
         } finally {
             row.__publishing = false
         }
     }
 
     onMounted(() => {
-        fetchCategoryList()
         loadData()
+        loadCategories()
     })
 </script>
 
