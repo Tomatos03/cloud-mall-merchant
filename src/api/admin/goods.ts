@@ -4,10 +4,7 @@ import type {
     GoodsPageParams,
     GoodsPageResult,
     GoodsInitialValues,
-    GoodsSubmitPayload,
-    GoodsId,
-    CategoryId,
-    StoreId,
+    GoodsInfo,
 } from '../common/goods'
 
 /**
@@ -27,7 +24,7 @@ export function getGoodsById(id: string) {
 /**
  * 管理员更新商品状态（上架/下架）
  */
-export function updateGoodsStatus(id: string, status: 1 | 0) {
+export function updateGoodsStatus(id: string, status: boolean) {
     return http.put<GoodsItem>('/admin/goods/status', { id, status })
 }
 
@@ -36,6 +33,19 @@ export function updateGoodsStatus(id: string, status: 1 | 0) {
  */
 export function deleteGoods(id: string) {
     return http.delete(`/admin/goods/${id}`)
+}
+
+/**
+ * 管理员更新商品信息
+ */
+/**
+ * 管理员审核商品
+ * @param id 商品ID
+ * @param auditStatus 审核状态：1-通过，2-驳回
+ * @param auditMsg 审核意见
+ */
+export function auditGoods(id: string, auditStatus: 1 | 2, auditMsg?: string) {
+    return http.put('/admin/goods/audit', { id, auditStatus, auditMsg })
 }
 
 /**
@@ -55,8 +65,7 @@ export function updateGoods(data: Partial<GoodsItem>) {
  */
 export async function fetchGoodsPageGeneral(params: GoodsPageParams) {
     // 不再进行运行时字段映射，直接返回后端原始字段名
-    const res = await http.get<GoodsPageResult>('/goods/page', params)
-    return res
+    return http.get<GoodsPageResult>('/goods/page', params)
 }
 
 /**
@@ -92,9 +101,9 @@ export function deleteGoodsGeneral(id: string) {
 /**
  * 更新商品上架状态（使用统一的键名和类型）
  */
-export function updateGoodsStatusGeneral(id: string, status: 1 | 0) {
+export function updateGoodsStatusGeneral(id: string, status: boolean) {
     // 将 id 与 status 一起传入 updateGoods，由 updateGoods 发送完整对象
-    return updateGoodsGeneral({ id, status: status === 1 })
+    return updateGoodsGeneral({ id, status })
 }
 
 /**
@@ -113,8 +122,5 @@ export type {
     GoodsPageParams,
     GoodsPageResult,
     GoodsInitialValues,
-    GoodsSubmitPayload,
-    GoodsId,
-    CategoryId,
-    StoreId,
+    GoodsInfo as GoodsSubmitPayload,
 }

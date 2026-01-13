@@ -23,7 +23,7 @@
         </div>
 
         <div class="flex items-center gap-3">
-            <el-button 
+            <el-button
                 class="reset-btn"
                 @click="handleReset"
             >

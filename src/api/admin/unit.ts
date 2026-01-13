@@ -1,14 +1,8 @@
 import { http } from '@/utils/http'
+import type { UnitItem } from '@/api/common/unit'
+import { UnitStatus } from '@/api/common/unit'
 
 const PREFIX = '/admin/units'
-
-// Unit 项类型
-export interface UnitItem {
-    id: string
-    name: string
-    status: 0 | 1  // 0: 禁用，1: 启用
-    sort: number
-}
 
 // 分页查询参数
 export interface UnitPageParams {
@@ -77,8 +71,8 @@ export function batchDeleteUnit(ids: string[]) {
 /**
  * 更新单位状态
  * @param id 单位 id
- * @param status 状态 (0: 禁用，1: 启用)
+ * @param status 状态 (UnitStatus.DISABLED: 禁用，UnitStatus.ENABLED: 启用)
  */
-export function updateUnitStatus(id: string, status: 0 | 1) {
+export function updateUnitStatus(id: string, status: UnitStatus) {
     return http.patch<UnitItem>(`${PREFIX}/${id}/status`, { status })
 }

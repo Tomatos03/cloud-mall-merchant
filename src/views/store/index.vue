@@ -33,7 +33,7 @@
                             <div
                                 class="banner-preview h-72 w-full rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center overflow-hidden relative transition-all group-hover:border-blue-400"
                             >
-                                <img v-if="formData.banner" :src="getImageURL(formData.banner)" class="w-full h-full object-cover" />
+                                <img v-if="formData.banner" :src="formData.banner" class="w-full h-full object-cover" />
                                 <div v-else class="flex flex-col items-center text-gray-400">
                                     <el-icon :size="48" class="mb-3"><PictureFilled /></el-icon>
                                     <span class="text-sm">点击或拖拽上传店铺横幅</span>
@@ -69,7 +69,7 @@
                                 <div class="avatar-container">
                                     <el-avatar
                                         :size="160"
-                                        :src="getImageURL(formData.avatarUrl)"
+                                        :src="formData.avatarUrl"
                                         class="!bg-gray-50 shop-avatar"
                                     >
                                         <img src="https://cube.elemecdn.com/e/fd/0fc7ed0f41a548f0d2481d4673c39png.png" />
@@ -157,7 +157,7 @@ import {
 } from '@element-plus/icons-vue'
 import type { FormInstance } from 'element-plus'
 import { getMerchantApi } from '@/api/client'
-import { getImageURL } from '@/utils/image'
+
 import { useUserStore } from '@/stores/user'
 import type { StoreInfo } from '@/api/merchant/store'
 

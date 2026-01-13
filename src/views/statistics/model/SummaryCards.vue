@@ -14,7 +14,6 @@ import {
   TrendCharts
 } from '@element-plus/icons-vue'
 import type { DashboardOverview } from '@/api/common/statistics'
-import { fenToYuan } from '@/utils/price'
 import { useUserStore } from '@/stores/user'
 
 interface Props {
@@ -37,7 +36,7 @@ const summaryCards = computed(() => {
   const cards = [
     {
       label: '今日营收',
-      value: props.summaryData ? fenToYuan(props.summaryData.todayRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00',
+      value: props.summaryData ? (props.summaryData.todayRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00',
       prefix: '¥',
       icon: Money,
       bg: '#ecf5ff',
@@ -67,7 +66,7 @@ const summaryCards = computed(() => {
 
   cards.push({
     label: '累计营收',
-    value: props.summaryData ? fenToYuan(props.summaryData.totalRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00',
+    value: props.summaryData ? (props.summaryData.totalRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00',
     prefix: '¥',
     icon: TrendCharts,
     bg: '#fef0f0',

@@ -1,19 +1,46 @@
 <template>
     <div class="step2-container">
-        <el-form :model="formData" :rules="rules" ref="formRef" label-position="left">
+        <!-- 页面状态提示条 -->
+        <div
+            v-if="showStatusHint && hintConfig"
+            :class="[
+                'mb-6 px-5 py-4 rounded-lg border-l-4 flex items-start gap-3',
+                hintConfig.containerClass,
+            ]"
+        >
+            <el-icon :class="hintConfig.iconClass + ' mt-0.5 shrink-0'">
+                <component :is="hintConfig.icon" />
+            </el-icon>
+            <div class="flex-1 min-w-0">
+                <div :class="hintConfig.titleClass + ' font-semibold mb-1'">
+                    {{ hintConfig.title }}
+                </div>
+                <div :class="hintConfig.textClass + ' text-sm leading-relaxed'">
+                    {{ hintConfig.message }}
+                </div>
+            </div>
+        </div>
+
+        <el-form
+            :model="formData"
+            :rules="rules"
+            ref="formRef"
+            label-position="left"
+            label-width="120px"
+        >
             <!-- 基本信息 -->
             <el-card shadow="never" class="mb-6 border-none rounded-xl">
                 <template #header>
                     <div class="font-bold text-lg text-gray-800">基本信息</div>
                 </template>
-                <div class="px-2.5">
-                    <el-form-item label="商品名称" prop="name">
+                <div class="px-12 py-6">
+                    <el-form-item label="商品名称" prop="goodsName">
                         <el-input
-                            v-model="formData.name"
+                            v-model="formData.goodsName"
                             placeholder="请输入商品名称"
-                            :readonly="isReadonly"
                             maxlength="30"
                             show-word-limit
+                            class="w-full!"
                         />
                     </el-form-item>
                     <el-form-item label="商品分类" prop="categoryId">
@@ -27,44 +54,43 @@
                                 emitPath: false,
                             }"
                             placeholder="请选择分类"
-                            class="w-full"
-                            :disabled="isReadonly"
+                            class="w-full!"
                         />
                     </el-form-item>
-                    <el-form-item label="商品单位" prop="unit">
+                    <el-form-item label="商品单位" prop="unitId">
                         <el-select
-                            v-model="formData.unit"
+                            v-model="formData.unitId"
                             placeholder="请选择商品单位"
-                            :disabled="isReadonly"
+                            class="w-full!"
                         >
                             <el-option
                                 v-for="unit in unitList"
                                 :key="unit.id"
                                 :label="unit.name"
-                                :value="unit.name"
+                                :value="unit.id"
                             />
                         </el-select>
                     </el-form-item>
 
-                    <el-form-item label="商品简介">
+                    <el-form-item label="商品简介" prop="sellPoint" required>
                         <el-input
-                            v-model="formData.info"
+                            v-model="formData.sellPoint"
                             placeholder="请输入商品详细介绍..."
-                            :readonly="isReadonly"
-                            maxlength="50"
+                            maxlength="30"
                             show-word-limit
+                            class="w-full!"
+                            required
                         />
                     </el-form-item>
 
                     <!-- 商品展示图 -->
-                    <el-form-item label="商品展示图" prop="img">
+                    <el-form-item label="商品展示图" prop="mainImg">
                         <div class="flex flex-col gap-2.5">
                             <draggable
                                 v-model="displayFileList"
                                 item-key="uid"
                                 class="flex flex-wrap gap-4"
-                                :disabled="isReadonly"
-                                @change="syncDisplayImages"
+                                @change="handleDisplayImageListChange"
                             >
                                 <template #item="{ element: file, index }">
                                     <li
@@ -86,7 +112,6 @@
                                                 ><ZoomIn
                                             /></el-icon>
                                             <el-icon
-                                                v-if="!isReadonly"
                                                 class="text-white cursor-pointer text-xl"
                                                 @click.stop="removeDisplayImage(index)"
                                                 ><Delete
@@ -96,7 +121,7 @@
                                 </template>
                                 <template #footer>
                                     <el-upload
-                                        v-if="!isReadonly && displayFileList.length < 10"
+                                        v-if="displayFileList.length < 10"
                                         action="#"
                                         list-type="picture-card"
                                         :auto-upload="false"
@@ -120,14 +145,13 @@
                     </el-form-item>
 
                     <!-- 商品详情图 -->
-                    <el-form-item label="商品详情图">
+                    <el-form-item label="商品详情图" prop="descriptionImgList">
                         <div class="flex flex-col gap-2.5">
                             <draggable
                                 v-model="detailFileList"
                                 item-key="uid"
                                 class="flex flex-wrap gap-4"
-                                :disabled="isReadonly"
-                                @change="syncDetailImages"
+                                @change="handleDiscriptionImageListChange"
                             >
                                 <template #item="{ element: file, index }">
                                     <li
@@ -143,7 +167,6 @@
                                                 ><ZoomIn
                                             /></el-icon>
                                             <el-icon
-                                                v-if="!isReadonly"
                                                 class="text-white cursor-pointer text-xl"
                                                 @click.stop="removeDetailImage(index)"
                                                 ><Delete
@@ -153,7 +176,7 @@
                                 </template>
                                 <template #footer>
                                     <el-upload
-                                        v-if="!isReadonly && detailFileList.length < 20"
+                                        v-if="detailFileList.length < 20"
                                         action="#"
                                         list-type="picture-card"
                                         :auto-upload="false"
@@ -171,7 +194,7 @@
 
                             <div class="mt-2 text-gray-400 text-xs flex items-center">
                                 <el-icon class="mr-1"><InfoFilled /></el-icon>
-                                建议宽度 750px，最多上传 20 张详情图
+                                至少上传 1 张，最多上传 20 张商品详情图，建议宽度 750px
                             </div>
                         </div>
                     </el-form-item>
@@ -195,10 +218,9 @@
                         <CapsuleToggle
                             v-model="formData.status"
                             :options="[
-                                { label: '立即上架', value: 1 },
-                                { label: '暂不上架', value: 0 },
+                                { label: '立即上架', value: true },
+                                { label: '暂不上架', value: false },
                             ]"
-                            :disabled="isReadonly"
                         />
                     </el-form-item>
                 </div>
@@ -208,16 +230,14 @@
             <SkuSpecification
                 v-model:specifications="internalSpecifications"
                 v-model:sku-list="internalSkuList"
-                :is-readonly="isReadonly"
             />
 
             <!-- 底部操作栏 -->
             <div class="flex justify-center gap-6 mt-10 pb-20">
-                <el-button size="large" class="w-40 rounded-xl!" @click="$emit('prev')"
+                <el-button size="large" class="w-40 rounded-xl!" @click="handlePrevClick"
                     >上一步</el-button
                 >
                 <el-button
-                    v-if="!isReadonly"
                     type="primary"
                     size="large"
                     class="w-40 rounded-xl! shadow-lg shadow-blue-200"
@@ -238,44 +258,74 @@
 
 <script setup lang="ts">
     import { ref, computed } from 'vue'
-    import { Plus, ZoomIn, Delete, InfoFilled } from '@element-plus/icons-vue'
+    import {
+        Plus,
+        ZoomIn,
+        Delete,
+        InfoFilled,
+        WarningFilled,
+        EditPen,
+    } from '@element-plus/icons-vue'
     import draggable from 'vuedraggable'
-    import { ElMessage } from 'element-plus'
+    import { ElMessage, ElMessageBox, type UploadFile } from 'element-plus'
+    import { useGoodsPublishStore } from '@/stores/goodsPublish'
     import CapsuleToggle from '@/components/CapsuleToggle.vue'
     import SkuSpecification from './SkuSpecification.vue'
-    import { uploadImage } from '@/api/common/common'
-    import { getImageURL } from '@/utils/image'
-    import type {
-        GoodsPublishPayload,
-        GoodsSpecification,
-        GoodsSkuItem,
-        FileItem,
-    } from '@/api/merchant/goods'
+    import { uploadImage, type Image } from '@/api/common/common'
+    import type { GoodsSubmitPayload, GoodsSpecification, GoodsSkuItem } from '@/api/merchant/goods'
     import type { CategoryItem } from '@/api/common/category'
-    import type { GoodsUnit } from '@/api/common/goods'
+    import { AuditStatus } from '@/api/common'
+    import type { Unit } from '@/api/common/unit'
 
-    const props = defineProps<{
-        formData: GoodsPublishPayload
+    // 提示条配置
+    interface HintConfig {
+        title: string
+        message: string
+        icon: any
+        containerClass: string
+        iconClass: string
+        titleClass: string
+        textClass: string
+    }
+
+    interface Props {
+        formData: GoodsSubmitPayload
         categoryList: CategoryItem[]
-        unitList: GoodsUnit[]
+        unitList: Unit[]
         specifications: GoodsSpecification[]
         skuList: GoodsSkuItem[]
-        displayImages: FileItem[]
-        detailImages: FileItem[]
-        isReadonly: boolean
+        displayImages: Image[]
+        descriptionImgList: Image[]
         submitting: boolean
-    }>()
+    }
+    const props = defineProps<Props>()
+    const publishStore = useGoodsPublishStore()
 
     const emit = defineEmits<{
         (e: 'prev'): void
         (e: 'submit'): void
-        (e: 'update:displayImages', val: FileItem[]): void
-        (e: 'update:detailImages', val: FileItem[]): void
+        (e: 'update:displayImages', val: Image[]): void
+        (e: 'update:descriptionImgList', val: Image[]): void
         (e: 'update:specifications', val: GoodsSpecification[]): void
         (e: 'update:skuList', val: GoodsSkuItem[]): void
     }>()
 
-    const formRef = ref<any>()
+    const handlePrevClick = async () => {
+        if (publishStore.isRepublish) {
+            await ElMessageBox.confirm(
+                '返回后将清空已编辑的重新发布内容，确定要返回吗？',
+                '返回确认',
+                {
+                    confirmButtonText: '确定返回',
+                    cancelButtonText: '继续编辑',
+                    type: 'warning',
+                },
+            )
+        }
+        emit('prev')
+    }
+
+    const formRef = ref()
     const previewVisible = ref(false)
     const previewImageUrl = ref('')
 
@@ -285,8 +335,8 @@
     })
 
     const detailFileList = computed({
-        get: () => props.detailImages,
-        set: (val) => emit('update:detailImages', val),
+        get: () => props.descriptionImgList,
+        set: (val) => emit('update:descriptionImgList', val),
     })
 
     const internalSpecifications = computed({
@@ -300,93 +350,137 @@
     })
 
     const rules = {
-        name: [{ required: true, message: '请输入商品名称', trigger: 'blur' }],
+        goodsName: [{ required: true, message: '请输入商品名称', trigger: 'blur' }],
         categoryId: [{ required: true, message: '请选择商品分类', trigger: 'change' }],
-        unit: [{ required: true, message: '请选择商品单位', trigger: 'change' }],
-        img: [
+        unitId: [{ required: true, message: '请选择计价单位', trigger: 'change' }],
+        sellPoint: [{ required: true, message: '请填写商品卖点', trigger: 'blur' }],
+        mainImg: [
             {
                 required: true,
                 message: '请至少上传一张商品展示图(第一张是主图)',
                 trigger: 'change',
             },
         ],
+        descriptionImgList: [
+            {
+                required: true,
+                message: '请至少上传一张商品详情图',
+                trigger: 'change',
+            },
+        ],
     }
 
+    const hintConfigMap: Record<string, HintConfig> = {
+        // 场景1: 编辑已有商品
+        edit: {
+            title: '编辑模式',
+            message: '您正在编辑已有的商品，修改后需要重新提交审核',
+            icon: EditPen,
+            containerClass: 'border-blue-500 bg-blue-50',
+            iconClass: 'text-blue-600',
+            titleClass: 'text-blue-900',
+            textClass: 'text-blue-800',
+        },
+        // 场景2: 审核被拒绝，需要整改重新发布
+        rejected: {
+            title: '审核被驳回',
+            message: '您的商品审核被驳回，请根据平台反馈调整内容后再次提交',
+            icon: WarningFilled,
+            containerClass: 'border-red-500 bg-red-50',
+            iconClass: 'text-red-600',
+            titleClass: 'text-red-900',
+            textClass: 'text-red-800',
+        },
+        // 场景3: 审核被撤销，需要重新发布
+        revoked: {
+            title: '审核已撤销',
+            message: '您已撤回审核申请，可以调整内容后重新提交',
+            icon: InfoFilled,
+            containerClass: 'border-amber-500 bg-amber-50',
+            iconClass: 'text-amber-600',
+            titleClass: 'text-amber-900',
+            textClass: 'text-amber-800',
+        },
+    }
+
+    // 判断当前场景
+    const currentHintType = computed(() => {
+        if (publishStore.isRepublish && publishStore.currentAuditStatus === AuditStatus.REJECTED) {
+            return 'rejected' // 审核被拒绝
+        }
+        if (publishStore.isRepublish && publishStore.currentAuditStatus === AuditStatus.REVOKED) {
+            return 'revoked' // 审核被撤销
+        }
+        if (publishStore.isEdit) {
+            return 'edit' // 编辑已有商品
+        }
+        return null
+    })
+
+    // 是否显示提示
+    const showStatusHint = computed(() => {
+        return !!currentHintType.value
+    })
+
+    // 获取当前提示配置
+    const hintConfig = computed(() => {
+        return hintConfigMap[currentHintType.value || 'edit']
+    })
+
     // 图片预览
-    const handlePictureCardPreview = (file: FileItem) => {
+    const handlePictureCardPreview = (file: Image) => {
         previewImageUrl.value = file.url
         previewVisible.value = true
+    }
+
+    const handleDisplayImageListChange = (newImge: Image[]) => {
+        publishStore.setDisplayImages(newImge)
+    }
+
+    const handleDiscriptionImageListChange = (newImge: Image[]) => {
+        publishStore.setDiscriptionImgList(newImge)
     }
 
     // 通用图处理逻辑
     const handleImageUpload = async (file: File) => {
         const formData = new FormData()
         formData.append('file', file)
+
         const res = await uploadImage(formData)
-        const relativePath = res.data.url
+        const uploadedImage = res.data
 
         return {
-            name: file.name,
-            url: getImageURL(relativePath),
-            rawUrl: relativePath,
-            uid: Date.now(),
+            uid: uploadedImage.uid || Date.now(),
+            name: uploadedImage.name || file.name,
+            url: uploadedImage.url,
         }
     }
-
-    // 展示图处理
-    const uploadDisplayImage = async (uploadFile: any) => {
-        const file = uploadFile.raw
-        if (!file || !validateImage(file)) return
-
-        const uploadedFile = await handleImageUpload(file)
-        const newList = [...displayFileList.value, uploadedFile]
-        displayFileList.value = newList
-        syncDisplayImages(newList)
-    }
-
     const removeDisplayImage = (index: number) => {
-        const newList = [...displayFileList.value]
-        newList.splice(index, 1)
+        const newList = displayFileList.value.filter((_, i) => i !== index)
         displayFileList.value = newList
-        syncDisplayImages(newList)
-    }
-
-    const syncDisplayImages = (list?: FileItem[]) => {
-        const targetList = Array.isArray(list) ? list : displayFileList.value
-        if (targetList.length > 0) {
-            props.formData.img = targetList[0]?.rawUrl || ''
-            props.formData.imgList = targetList
-                .slice(1)
-                .map((f: FileItem) => f.rawUrl)
-                .join(',')
-        } else {
-            props.formData.img = ''
-            props.formData.imgList = ''
-        }
-        formRef.value?.validateField('img').catch(() => {})
-    }
-
-    // 详情图处理
-    const uploadDetailImage = async (uploadFile: any) => {
-        const file = uploadFile.raw
-        if (!file || !validateImage(file)) return
-
-        const uploadedFile = await handleImageUpload(file)
-        const newList = [...detailFileList.value, uploadedFile]
-        detailFileList.value = newList
-        syncDetailImages(newList)
     }
 
     const removeDetailImage = (index: number) => {
-        const newList = [...detailFileList.value]
-        newList.splice(index, 1)
+        const newList = detailFileList.value.filter((_, i) => i !== index)
         detailFileList.value = newList
-        syncDetailImages(newList)
     }
 
-    const syncDetailImages = (list?: FileItem[]) => {
-        const targetList = Array.isArray(list) ? list : detailFileList.value
-        props.formData.detailImages = targetList.map((f: FileItem) => f.rawUrl).join(',')
+    // 展示图处理
+    const uploadDisplayImage = async (uploadFile: UploadFile) => {
+        const file = uploadFile.raw
+        if (!file || !validateImage(file)) return
+
+        const uploadedFile = await handleImageUpload(file)
+        displayFileList.value = [...displayFileList.value, uploadedFile]
+    }
+
+    // 详情图处理
+    const uploadDetailImage = async (uploadFile: UploadFile) => {
+        const file = uploadFile.raw
+        if (!file || !validateImage(file)) return
+
+        const uploadedFile = await handleImageUpload(file)
+        detailFileList.value = [...detailFileList.value, uploadedFile]
     }
 
     const validateImage = (file: File) => {
@@ -409,12 +503,24 @@
             await formRef.value.validate()
             emit('submit')
         } catch (error) {
-            console.error('Validation failed', error)
+            ElMessage.error('请补全所有必填信息后再提交')
         }
     }
 </script>
 
 <style scoped>
+    /* 修复左侧对齐时，必填项星号导致的文本不齐问题 */
+    :deep(.el-form-item__label) {
+        position: relative;
+        padding-left: 12px !important;
+    }
+
+    :deep(.el-form-item.is-required > .el-form-item__label::before) {
+        position: absolute;
+        left: 0;
+        margin-right: 0 !important;
+    }
+
     .upload-trigger :deep(.el-upload--picture-card) {
         width: 128px;
         height: 128px;

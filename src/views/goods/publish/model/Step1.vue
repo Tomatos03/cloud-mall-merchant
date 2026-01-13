@@ -12,8 +12,12 @@
                 class="flex-1 bg-white rounded-2xl p-8 border-2 border-transparent hover:border-blue-500 hover:shadow-xl transition-all cursor-pointer group shadow-sm"
                 @click="$emit('select', 'new')"
             >
-                <div class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-blue-500 transition-colors">
-                    <el-icon :size="32" class="text-blue-500 group-hover:text-white"><Plus /></el-icon>
+                <div
+                    class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-blue-500 transition-colors"
+                >
+                    <el-icon :size="32" class="text-blue-500 group-hover:text-white"
+                        ><Plus
+                    /></el-icon>
                 </div>
                 <h3 class="text-xl font-bold text-gray-800 mb-3">发布新商品</h3>
                 <p class="text-gray-500 text-sm leading-relaxed">
@@ -29,8 +33,12 @@
                 class="flex-1 bg-white rounded-2xl p-8 border-2 border-transparent hover:border-orange-500 hover:shadow-xl transition-all cursor-pointer group shadow-sm"
                 @click="$emit('select', 'template')"
             >
-                <div class="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-orange-500 transition-colors">
-                    <el-icon :size="32" class="text-orange-500 group-hover:text-white"><DocumentCopy /></el-icon>
+                <div
+                    class="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-orange-500 transition-colors"
+                >
+                    <el-icon :size="32" class="text-orange-500 group-hover:text-white"
+                        ><DocumentCopy
+                    /></el-icon>
                 </div>
                 <h3 class="text-xl font-bold text-gray-800 mb-3">从模板导入</h3>
                 <p class="text-gray-500 text-sm leading-relaxed">
@@ -45,15 +53,15 @@
 </template>
 
 <script setup lang="ts">
-import { Plus, DocumentCopy, ArrowRight } from '@element-plus/icons-vue'
+    import { Plus, DocumentCopy, ArrowRight } from '@element-plus/icons-vue'
 
-defineEmits<{
-    (e: 'select', type: 'new' | 'template'): void
-}>()
+    defineEmits<{
+        (e: 'select', type: 'new' | 'template'): void
+    }>()
 </script>
 
 <style scoped>
-.group:hover h3 {
-    color: var(--el-color-primary);
-}
+    .group:hover h3 {
+        color: var(--el-color-primary);
+    }
 </style>

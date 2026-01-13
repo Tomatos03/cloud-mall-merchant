@@ -19,6 +19,16 @@
                 :showId="true"
                 v-model:selectList="selectList"
             >
+                <template #imageUrl="{ row }">
+                    <el-image
+                        :src="row.imageUrl"
+                        :preview-src-list="[row.imageUrl]"
+                        preview-teleported
+                        fit="cover"
+                        class="w-16 h-10 rounded shadow-sm border border-gray-100"
+                    />
+                </template>
+
                 <template #isRecommend="{ row }">
                     <el-switch
                         :model-value="row.isRecommend"
@@ -66,11 +76,9 @@
     import BannerFormDialog from './model/BannerFormDialog.vue'
 
     const columns = [
-        { id: '1', label: '名称', key: 'title' },
-        { id: '2', label: '说明', key: 'info' },
-        { id: '3', label: '图片URL', key: 'imageUrl' },
-        { id: '5', label: '关联商品', key: 'goodsName' },
-        { id: '4', label: '是否推荐', key: 'isRecommend' },
+        { id: '1', label: '轮播图预览', key: 'imageUrl' },
+        { id: '2', label: '关联商品', key: 'goodsName' },
+        { id: '3', label: '推荐展示', key: 'isRecommend' },
     ]
 
     const data = ref<BannerItem[]>([])
@@ -184,7 +192,7 @@
     const onDelete = async (row: BannerItem) => {
         try {
             await ElMessageBox.confirm(
-                `确定要删除轮播图 "${row.title}" 吗？`,
+                `确定要删除关联商品 "${row.goodsName}" 的轮播图吗？`,
                 '提示',
                 {
                     confirmButtonText: '确定',

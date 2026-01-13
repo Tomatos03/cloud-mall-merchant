@@ -10,6 +10,10 @@ export function getCategoryList() {
     return http.get<Category[]>(`${PREFIX}/category/list`)
 }
 
+export function getCategoryAllTree() {
+    return http.get<Category[]>(`${PREFIX}/category/allTree`)
+}
+
 /**
  * 添加分类
  */
@@ -32,20 +36,6 @@ export function deleteCategory(id: string) {
     return http.post(`${PREFIX}/category/delete/${id}`)
 }
 
-// 通用 API 函数（不关联到特定角色）
-/**
- * 获取分类树/列表（通用）
- */
-export function getCategoryListGeneral() {
-    return http.get<Category[]>('/category/list')
-}
-
-/**
- * 获取分类树（通用）
- */
-export function getCategoryTreeGeneral() {
-    return http.get<CategoryItem[]>('/category/tree')
-}
 
 // 导出公共类型
 export type { CategoryItem, Category, CategoryPageParams, CategoryPageResult, CategoryFormData }

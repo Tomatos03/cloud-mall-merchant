@@ -14,139 +14,137 @@
             </div>
         </template>
 
-        <!-- 规格设置部分 -->
-        <div class="space-y-6 mb-8">
-            <div
-                v-for="(spec, index) in internalSpecifications"
-                :key="index"
-                class="p-6 bg-gray-50/50 rounded-xl border border-gray-100 relative group"
-            >
-                <el-button
-                    v-if="!isReadonly"
-                    type="danger"
-                    circle
-                    size="small"
-                    class="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    @click="removeSpec(index)"
+        <div class="px-12 py-4">
+            <!-- 规格设置部分 -->
+            <div class="space-y-6 mb-8">
+                <div
+                    v-for="(spec, index) in internalSpecifications"
+                    :key="index"
+                    class="p-6 bg-gray-50/50 rounded-xl border border-gray-100 relative group"
                 >
-                    <el-icon><Close /></el-icon>
-                </el-button>
+                    <el-button
+                        v-if="!isReadonly"
+                        type="danger"
+                        circle
+                        size="small"
+                        class="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                        @click="removeSpec(index)"
+                    >
+                        <el-icon><Close /></el-icon>
+                    </el-button>
 
-                <div class="flex items-center gap-4 mb-4">
-                    <span class="text-sm font-bold text-gray-600 w-16">规格名:</span>
-                    <el-input
-                        v-model="spec.name"
-                        placeholder="如：颜色、尺寸"
-                        class="max-w-xs"
-                        :readonly="isReadonly"
-                    />
-                </div>
+                    <div class="flex items-center gap-4 mb-4">
+                        <span class="text-sm font-bold text-gray-600 w-24">规格名:</span>
+                        <el-input
+                            v-model="spec.name"
+                            placeholder="如：颜色、尺寸"
+                            class="w-full! max-w-2xl"
+                            :readonly="isReadonly"
+                        />
+                    </div>
 
-                <div class="flex items-start gap-4">
-                    <span class="text-sm font-bold text-gray-600 w-16 mt-1.5">规格值:</span>
-                    <div class="flex flex-wrap gap-2 flex-1">
-                        <el-tag
-                            v-for="val in spec.values"
-                            :key="val"
-                            closable
-                            :disable-transitions="false"
-                            @close="removeSpecValue(spec, val)"
-                            class="rounded-lg"
-                        >
-                            {{ val }}
-                        </el-tag>
-                        <div v-if="!isReadonly" class="inline-block">
-                            <el-input
-                                v-if="specInputStates[index]?.visible"
-                                :ref="(el) => (inputRefs[index] = el)"
-                                v-model="specInputStates[index].value"
-                                size="small"
-                                class="w-24"
-                                @keyup.enter="handleInputConfirm(spec, index)"
-                                @blur="handleInputConfirm(spec, index)"
-                            />
-                            <el-button
-                                v-else
-                                size="small"
-                                icon="Plus"
-                                @click="showInput(index)"
-                                >添加值</el-button
+                    <div class="flex items-start gap-4">
+                        <span class="text-sm font-bold text-gray-600 w-24 mt-1.5">规格值:</span>
+                        <div class="flex flex-wrap gap-2 flex-1">
+                            <el-tag
+                                v-for="val in spec.values"
+                                :key="val"
+                                closable
+                                :disable-transitions="false"
+                                @close="removeSpecValue(spec, val)"
+                                class="rounded-lg"
                             >
+                                {{ val }}
+                            </el-tag>
+                            <div v-if="!isReadonly" class="inline-block">
+                                <el-input
+                                    v-if="specInputStates[index]?.visible"
+                                    :ref="(el) => (inputRefs[index] = el)"
+                                    v-model="specInputStates[index].value"
+                                    size="small"
+                                    class="w-24"
+                                    @keyup.enter="handleInputConfirm(spec, index)"
+                                    @blur="handleInputConfirm(spec, index)"
+                                />
+                                <el-button v-else size="small" icon="Plus" @click="showInput(index)"
+                                    >添加值</el-button
+                                >
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                <el-button
+                    v-if="!isReadonly && internalSpecifications.length < 3"
+                    type="primary"
+                    plain
+                    class="w-full border-dashed rounded-xl! h-12"
+                    @click="addSpec"
+                >
+                    <el-icon class="mr-1"><Plus /></el-icon>添加规格名 (最多3个)
+                </el-button>
             </div>
 
-            <el-button
-                v-if="!isReadonly && internalSpecifications.length < 3"
-                type="primary"
-                plain
-                class="w-full border-dashed rounded-xl! h-12"
-                @click="addSpec"
-            >
-                <el-icon class="mr-1"><Plus /></el-icon>添加规格名 (最多3个)
-            </el-button>
-        </div>
-
-        <!-- SKU 组合列表部分 -->
-        <div class="border-t border-gray-100 pt-6">
-            <div class="text-sm font-bold text-gray-600 mb-4">SKU 组合列表</div>
-            <el-table
-                :data="internalSkuList"
-                border
-                class="rounded-lg overflow-hidden"
-                :show-header="internalSkuList.length > 0"
-            >
-                <template #empty>
-                    <el-empty description="暂无规格组合，请先添加商品规格" :image-size="100" />
-                </template>
-                <el-table-column
-                    v-for="spec in internalSpecifications.filter((s) => s.name)"
-                    :key="spec.name"
-                    :label="spec.name"
-                    align="center"
+            <!-- SKU 组合列表部分 -->
+            <div class="border-t border-gray-100 pt-8">
+                <div class="text-sm font-bold text-gray-600 mb-6">SKU 组合列表</div>
+                <el-table
+                    :data="internalSkuList"
+                    border
+                    class="rounded-lg overflow-hidden"
+                    :show-header="internalSkuList.length > 0"
                 >
-                    <template #default="{ row }: { row: GoodsSkuItem }">
-                        <span class="font-medium text-gray-700">{{
-                            row.specs.find((s) => s.name === spec.name)?.value
-                        }}</span>
+                    <template #empty>
+                        <el-empty description="暂无规格组合，请先添加商品规格" :image-size="100" />
                     </template>
-                </el-table-column>
-                <el-table-column label="价格" width="180" align="center">
-                    <template #default="{ row }: { row: GoodsSkuItem }">
-                        <el-input-number
-                            v-model="row.price"
-                            :min="0"
-                            size="small"
-                            class="w-full!"
-                            controls-position="right"
-                            :disabled="isReadonly"
-                        />
-                    </template>
-                </el-table-column>
-                <el-table-column label="库存" width="180" align="center">
-                    <template #default="{ row }: { row: GoodsSkuItem }">
-                        <el-input-number
-                            v-model="row.inventory"
-                            :min="0"
-                            size="small"
-                            class="w-full!"
-                            controls-position="right"
-                            :disabled="isReadonly"
-                        />
-                    </template>
-                </el-table-column>
-                <el-table-column label="是否启用" width="150" align="center">
-                    <template #default="{ row }: { row: GoodsSkuItem }">
-                        <el-switch
-                            v-model="row.status"
-                            :active-value="1"
-                            :inactive-value="0"
-                            :disabled="isReadonly"
-                        />
-                    </template>
-                </el-table-column>
-            </el-table>
+                    <el-table-column
+                        v-for="spec in internalSpecifications.filter((s) => s.name)"
+                        :key="spec.name"
+                        :label="spec.name"
+                        align="center"
+                    >
+                        <template #default="{ row }: { row: GoodsSkuItem }">
+                            <span class="font-medium text-gray-700">{{
+                                row.specs.find((s) => s.name === spec.name)?.value
+                            }}</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="价格" width="180" align="center">
+                        <template #default="{ row }: { row: GoodsSkuItem }">
+                            <el-input-number
+                                v-model="row.price"
+                                :min="0"
+                                size="small"
+                                class="w-full!"
+                                controls-position="right"
+                                :disabled="isReadonly"
+                            />
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="库存" width="180" align="center">
+                        <template #default="{ row }: { row: GoodsSkuItem }">
+                            <el-input-number
+                                v-model="row.inventory"
+                                :min="0"
+                                size="small"
+                                class="w-full!"
+                                controls-position="right"
+                                :disabled="isReadonly"
+                            />
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="是否启用" width="150" align="center">
+                        <template #default="{ row }: { row: GoodsSkuItem }">
+                            <el-switch
+                                v-model="row.status"
+                                :active-value="1"
+                                :inactive-value="0"
+                                :disabled="isReadonly"
+                            />
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
         </div>
     </el-card>
 </template>
@@ -155,18 +153,17 @@
     import { ref, nextTick, watch, computed, reactive } from 'vue'
     import { Plus, Close } from '@element-plus/icons-vue'
     import { ElMessage, ElMessageBox, type InputInstance } from 'element-plus'
+    import type { GoodsSpecification, GoodsSkuItem, GoodsSkuSpec } from '@/api/merchant/goods'
 
-    import type {
-        GoodsSpecification,
-        GoodsSkuItem,
-        GoodsSkuSpec,
-    } from '@/api/merchant/goods'
-
-    const props = defineProps<{
+    interface Props {
         specifications: GoodsSpecification[]
         skuList: GoodsSkuItem[]
-        isReadonly: boolean
-    }>()
+        isReadonly?: boolean
+    }
+
+    const props = withDefaults(defineProps<Props>(), {
+        isReadonly: false,
+    })
 
     const emit = defineEmits<{
         (e: 'update:specifications', val: GoodsSpecification[]): void

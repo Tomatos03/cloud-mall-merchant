@@ -76,7 +76,7 @@ router.beforeEach(async (to, _from, next) => {
     if (shouldRestoreDynamicRoutes(token, permissionStore, userStore, to)) {
         console.log('[router] 从持久化数据恢复动态路由...')
         await permissionStore.restoreRoutesFromPersist(router, componentResolver)
-        
+
         // 恢复后检查是否匹配成功，避免无限循环
         const resolved = router.resolve(to)
         if (resolved.matched.length > 0) {

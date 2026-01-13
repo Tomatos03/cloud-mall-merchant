@@ -2,14 +2,6 @@
     <!-- 添加/编辑轮播图对话框（内部只负责表单与抛事件，API 交给父组件） -->
     <el-dialog :model-value="visible" :title="dialogTitle" width="520px" @close="handleClose">
         <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
-            <el-form-item label="名称" prop="title">
-                <el-input v-model="form.title" placeholder="请输入轮播图名称" />
-            </el-form-item>
-
-            <el-form-item label="说明" prop="info">
-                <el-input v-model="form.info" placeholder="请输入说明" />
-            </el-form-item>
-
             <el-form-item label="图片" prop="imageUrl">
                 <!-- 有图片时：点击更换图片 -->
                 <div
@@ -98,8 +90,6 @@
     }>()
 
     const form = ref<Partial<BannerItem>>({
-        title: '',
-        info: '',
         imageUrl: '',
         goodsId: '',
         goodsName: '',
@@ -116,15 +106,12 @@
 
     // 简单校验规则（创建时 goodsId 为必填）
     const rules = {
-        title: [{ required: true, message: '请输入名称', trigger: 'blur' }],
         imageUrl: [{ required: true, message: '请上传图片', trigger: 'blur' }],
         goodsId: [{ required: true, message: '请选择关联商品', trigger: 'change' }],
     }
 
     const resetForm = async () => {
         form.value = {
-            title: '',
-            info: '',
             imageUrl: '',
             goodsId: '',
             goodsName: '',
@@ -150,8 +137,6 @@
 
         form.value = {
             id: b.id,
-            title: b.title ?? '',
-            info: b.info ?? '',
             imageUrl: b.imageUrl ?? '',
             goodsId: b.goodsId !== undefined && b.goodsId !== null ? String(b.goodsId) : '',
             goodsName: b.goodsName ?? '',

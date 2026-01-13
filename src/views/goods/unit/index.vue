@@ -31,6 +31,7 @@
 
                 <template #action="{ row }">
                     <el-button size="small" type="warning" @click="onEdit(row)">编辑</el-button>
+                    <el-button size="small" type="danger" @click="onDelete(row)">删除</el-button>
                 </template>
             </Table>
         </div>
@@ -133,28 +134,22 @@
             return
         }
 
-        try {
-            await ElMessageBox.confirm(
-                `确定要删除选中的 ${selectList.value.length} 项吗？`,
-                '提示',
-                {
-                    confirmButtonText: '确定',
-                    cancelButtonText: '取消',
-                    type: 'warning',
-                },
-            )
+        await ElMessageBox.confirm(
+            `确定要删除选中的 ${selectList.value.length} 项吗？`,
+            '提示',
+            {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning',
+            },
+        )
 
-            const ids = selectList.value.map((item) => item.id)
-            const api = getAdminApi()
-            await api.batchDeleteUnit(ids)
-            ElMessage.success('删除成功')
-            selectList.value = []
-            loadData()
-        } catch (err: unknown) {
-            if (err !== 'cancel') {
-                ElMessage.error('删除失败')
-            }
-        }
+        const ids = selectList.value.map((item) => item.id)
+        const api = getAdminApi()
+        await api.batchDeleteUnit(ids)
+        ElMessage.success('删除成功')
+        selectList.value = []
+        loadData()
     }
 
     const onEdit = (row: UnitItem) => {
@@ -162,6 +157,23 @@
             ...JSON.parse(JSON.stringify(row)),
         }
         showAddModal.value = true
+    }
+
+    const onDelete = async (row: UnitItem) => {
+        await ElMessageBox.confirm(
+            `确定要删除 "${row.name}" 吗？`,
+            '提示',
+            {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning',
+            },
+        )
+
+        const api = getAdminApi()
+        await api.deleteUnit(String(row.id))
+        ElMessage.success('删除成功')
+        loadData()
     }
 
     const statusLoading = ref<Record<string, boolean>>({})

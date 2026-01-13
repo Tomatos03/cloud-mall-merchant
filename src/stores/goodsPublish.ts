@@ -1,37 +1,39 @@
 import { defineStore } from 'pinia'
-import { getMerchantApi } from '@/api/client'
-import { getImageURL } from '@/utils/image'
-import type { GoodsPublishPayload, FileItem, GoodsUnit } from '@/api/merchant/goods'
-import type { CategoryItem } from '@/api/common/category'
-import type { GoodsSpecification, GoodsSkuItem } from '@/api/common/goods'
+import { useCategoryStore } from './category'
+import type { GoodsSubmitPayload } from '@/api/merchant/goods'
+import type { GoodsAuditInfo } from '@/views/goods/audit/model/AuditMerchantView.vue'
+import type { AuditStatus, GoodsSkuItem, GoodsSpecification, Image } from '@/api/common'
+import { useUnitStore } from './unit'
+import { th } from 'element-plus/es/locale/index.mjs'
+
+/**
+ * 商品发布步骤枚举
+ */
+export enum PublishStep {
+    /** 选择发布方式 */
+    MODEL_SELECT = 0,
+    /** 商品信息填写 */
+    WRITE_INFO = 1,
+    /** 发布成功 */
+    SUCCESS = 2,
+}
+
+export type PublishStepIndex = PublishStep
 
 export interface GoodsPublishState {
     // 发布表单数据
-    formData: GoodsPublishPayload
-    // 展示图列表
-    displayImages: FileItem[]
-    // 详情图列表
-    detailImages: FileItem[]
-    // 商品规格
-    specifications: GoodsSpecification[]
-    // SKU列表
-    skuList: GoodsSkuItem[]
-    // 分类列表
-    categoryList: CategoryItem[]
-    // 单位列表
-    unitList: GoodsUnit[]
+    formData: GoodsSubmitPayload
     // 当前活动步骤
-    activeStep: number
+    activeStep: PublishStep
     // 是否正在提交
     submitting: boolean
     // 是否只读模式
-    isReadonly: boolean
-    // 当前编辑的商品ID
-    currentGoodsId: string | undefined
+    currentGoodsId?: string
     // 加载状态
     loading: boolean
-    // 是否已初始化基础数据
-    baseDataLoaded: boolean
+    // 当前审核记录ID
+    currentAuditId?: string
+    currentAuditStatus?: AuditStatus
 }
 
 /**
@@ -39,214 +41,119 @@ export interface GoodsPublishState {
  * - 用于管理商品发布流程中的所有状态
  * - 支持刷新时重新加载数据
  * - 提供初始化、重置等操作
+ * - 重点：发布成功页（步骤2）不持久化，通过页面初始化检查重置
  */
 export const useGoodsPublishStore = defineStore('goodsPublish', {
     state: (): GoodsPublishState => ({
         formData: {
-            name: '',
-            categoryId: '',
-            unit: '件',
-            status: 1,
-            info: '',
-            img: '',
-            imgList: '',
-            detailImages: '',
+            status: true,
+            imgList: [],
+            descriptionImgList: [],
             specifications: [],
             skus: [],
-            storeId: '',
-            storeName: '',
         },
-        displayImages: [],
-        detailImages: [],
-        specifications: [{ name: '', values: [] }],
-        skuList: [],
-        categoryList: [],
-        unitList: [],
-        activeStep: 0,
+        activeStep: PublishStep.MODEL_SELECT,
         submitting: false,
-        isReadonly: false,
-        currentGoodsId: undefined,
         loading: false,
-        baseDataLoaded: false,
     }),
 
     getters: {
         /**
-         * 检查表单是否有效
+         * 是否是编辑模式（有商品ID）
          */
-        isFormValid: (state) => {
-            return (
-                state.formData.name &&
-                state.formData.categoryId &&
-                state.formData.unit &&
-                state.displayImages.length > 0
-            )
+        isEdit: (state): boolean => {
+            return !!state.currentGoodsId
         },
 
-        /**
-         * 检查规格是否有效
-         */
-        hasValidSpec: (state) => {
-            return state.specifications.some((s) => s.name && s.values.length > 0)
+        isRepublish: (state): boolean => {
+            return !!state.currentAuditId
         },
-
-        /**
-         * 获取有效的规格（过滤空的规格）
-         */
-        validSpecifications: (state) => {
-            return state.specifications.filter((s) => s.name && s.values.length > 0)
+        descriptionImgList: (state): Image[] => {
+            return state.formData.descriptionImgList
+        },
+        specifications: (state): GoodsSpecification[] => {
+            return state.formData.specifications
+        },
+        skuList: (state): GoodsSkuItem[] => {
+            return state.formData.skus
+        },
+        displayImages: (state): Image[] => {
+            return state.formData.mainImg
         },
     },
 
     actions: {
-        /**
-         * 初始化基础数据（分类、单位等）
-         */
-        async initBaseData() {
-            if (this.baseDataLoaded) return
-
-            this.loading = true
-            try {
-                const api = getMerchantApi()
-                const [categoryRes, unitRes] = await Promise.all([
-                    api.getCategoryTree(),
-                    api.getGoodsUnitList(),
-                ])
-
-                this.categoryList = categoryRes.data || []
-                this.unitList = unitRes.data || []
-                this.baseDataLoaded = true
-            } finally {
-                this.loading = false
-            }
-        },
-
-        /**
-         * 加载商品数据（编辑模式）
-         */
-        async loadGoodsData(goodsId: string) {
-            this.loading = true
-            try {
-                const api = getMerchantApi()
-                const res = await api.getGoodsById(goodsId)
-                const data = res.data
-
-                // 设置表单数据
-                this.formData = {
-                    id: data.id,
-                    name: data.name || '',
-                    categoryId: data.categoryId || '',
-                    unit: data.unit || '件',
-                    status: data.status ? 1 : 0,
-                    info: data.info || '',
-                    img: data.img || '',
-                    imgList: data.imgList || '',
-                    detailImages: data.detailImages || '',
-                    storeId: data.storeId || '',
-                    storeName: data.storeName || '',
-                    specifications: [],
-                    skus: [],
-                }
-
-                // 处理展示图
-                const displayList: FileItem[] = []
-                if (data.img) {
-                    displayList.push({
-                        name: 'main-image',
-                        url: getImageURL(data.img),
-                        rawUrl: data.img,
-                        uid: Date.now(),
-                    })
-                }
-                if (data.imgList && typeof data.imgList === 'string') {
-                    data.imgList.split(',').forEach((url, index) => {
-                        if (url) {
-                            displayList.push({
-                                name: `display-${index}`,
-                                url: getImageURL(url),
-                                rawUrl: url,
-                                uid: Date.now() + index + 1,
-                            })
-                        }
-                    })
-                }
-                this.displayImages = displayList
-
-                // 处理详情图
-                if (data.detailImages && typeof data.detailImages === 'string') {
-                    this.detailImages = data.detailImages
-                        .split(',')
-                        .filter(Boolean)
-                        .map((url, index) => ({
-                            name: `detail-${index}`,
-                            url: getImageURL(url),
-                            rawUrl: url,
-                            uid: Date.now() + index + 100,
-                        }))
-                }
-
-                // 处理规格和SKU
-                if (Array.isArray(data.specifications)) {
-                    this.specifications = data.specifications
-                }
-                if (Array.isArray(data.skus)) {
-                    this.skuList = data.skus
-                }
-
-                this.currentGoodsId = goodsId
-            } finally {
-                this.loading = false
-            }
-        },
-
-        /**
-         * 设置店铺信息
-         */
-        setStoreInfo(storeId: string, storeName: string) {
-            this.formData.storeId = storeId
-            this.formData.storeName = storeName
-        },
-
-        /**
-         * 更新表单数据
-         */
-        updateFormData(data: Partial<GoodsPublishPayload>) {
-            Object.assign(this.formData, data)
-        },
-
-        /**
-         * 更新展示图列表
-         */
-        setDisplayImages(images: FileItem[]) {
-            this.displayImages = images
-        },
-
-        /**
-         * 更新详情图列表
-         */
-        setDetailImages(images: FileItem[]) {
-            this.detailImages = images
-        },
-
-        /**
-         * 更新规格列表
-         */
         setSpecifications(specs: GoodsSpecification[]) {
-            this.specifications = specs
+            this.formData.specifications = specs
         },
-
-        /**
-         * 更新SKU列表
-         */
         setSkuList(skus: GoodsSkuItem[]) {
-            this.skuList = skus
+            this.formData.skus = skus
+        },
+        setDiscriptionImgList(imgList: Image[]) {
+            this.formData.descriptionImgList = imgList
+        },
+        setDisplayImages(imgList: Image[]) {
+            this.formData.mainImg = imgList[0]
+            this.formData.imgList = [...imgList.slice(1)]
+        },
+        /**
+         * 设置审核驳回的商品数据（用于重新发布）
+         * 直接调用 loadAuditDataForRepublish 方法来完整加载审核数据
+         */
+        setFormDataForRepublish(auditData: GoodsAuditInfo) {
+            this.currentAuditId = auditData.auditId
+            this.setFormData(auditData)
+        },
+        /**
+         * 设置表单数据
+         */
+        setFormData(data: GoodsSubmitPayload) {
+            this.loading = true
+            try {
+                this.formData = {
+                    goodsId: data.goodsId,
+                    goodsName: data.goodsName,
+                    categoryId: data.categoryId,
+                    unitId: data.unitId,
+                    status: !!data.status,
+                    sellPoint: data.sellPoint,
+                    mainImg: data.mainImg,
+                    imgList: data.imgList ?? [],
+                    descriptionImgList: data.descriptionImgList,
+                    storeId: data.storeId,
+                    specifications: data.specifications ?? [],
+                    skus: data.skus ?? [],
+                }
+            } finally {
+                this.loading = false
+            }
         },
 
         /**
          * 设置当前步骤
          */
-        setActiveStep(step: number) {
+        setActiveStep(step: PublishStep) {
             this.activeStep = step
+        },
+        async initBaseData() {
+            Promise.all([useCategoryStore().loadCategoryList(), useUnitStore().loadUnitList()])
+        },
+
+        /**
+         * 切换到下一个步骤
+         */
+        nextStep(): void {
+            switch (this.activeStep) {
+                case PublishStep.MODEL_SELECT:
+                    break
+                case PublishStep.WRITE_INFO:
+                    this.initBaseData()
+                    break
+                case PublishStep.SUCCESS:
+                    break
+            }
+            const STEP_NUM = Object.keys(PublishStep).length / 2
+            this.activeStep = (this.activeStep + 1) % STEP_NUM
         },
 
         /**
@@ -257,57 +164,30 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
         },
 
         /**
-         * 设置只读模式
-         */
-        setReadonly(readonly: boolean) {
-            this.isReadonly = readonly
-        },
-
-        /**
          * 重置整个发布流程
          */
         resetPublishFlow() {
             this.$reset()
-            this.baseDataLoaded = false
-        },
-
-        /**
-         * 重置表单数据（保留基础数据）
-         */
-        resetFormData(storeId: string, storeName: string) {
-            this.formData = {
-                name: '',
-                categoryId: '',
-                unit: '件',
-                status: 1,
-                info: '',
-                img: '',
-                imgList: '',
-                detailImages: '',
-                specifications: [],
-                skus: [],
-                storeId,
-                storeName,
-            }
-            this.displayImages = []
-            this.detailImages = []
-            this.specifications = [{ name: '', values: [] }]
-            this.skuList = []
-            this.activeStep = 0
-            this.currentGoodsId = undefined
         },
 
         /**
          * 获取提交的完整数据
+         * 注意：需要清理多余字段，确保数据结构符合后端要求
          */
-        getSubmitPayload(): GoodsPublishPayload {
-            return {
-                ...this.formData,
-                specifications: this.validSpecifications,
-                skus: this.skuList,
+        getSubmitPayload(): GoodsSubmitPayload {},
+
+        /**
+         * 检查并重置成功状态
+         * 供页面初始化时调用，替代无法使用的 afterRestore 钩子
+         */
+        checkAndResetIfNecessary() {
+            if (this.activeStep === PublishStep.SUCCESS) {
+                this.resetPublishFlow()
             }
         },
     },
 
-    persist: true,
+    persist: {
+        key: 'goods-publish-persist',
+    },
 })

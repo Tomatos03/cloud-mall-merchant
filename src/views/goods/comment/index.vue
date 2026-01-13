@@ -55,7 +55,7 @@
                         <!-- 左侧商品预览 -->
                         <div class="relative flex-shrink-0">
                             <el-image
-                                :src="getImageURL(item.goodsImage)"
+                                :src="item.goodsImage"
                                 class="w-24 h-24 rounded-xl shadow-sm border border-gray-100"
                                 fit="cover"
                             >
@@ -160,7 +160,6 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Picture, User, Document, Clock, ChatDotRound } from '@element-plus/icons-vue'
 import type { CommentItem, CommentPageParams } from '@/api/merchant/comment'
 import { getMerchantApi } from '@/api/client'
-import { getImageURL } from '@/utils/image'
 
 const loading = ref(false)
 const data = ref<CommentItem[]>([])

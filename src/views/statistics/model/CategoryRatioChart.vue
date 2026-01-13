@@ -15,7 +15,6 @@ import { PieChart } from 'echarts/charts'
 import { TooltipComponent, LegendComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
 import type { CategoryRatio } from '@/api/common/statistics'
-import { fenToYuan } from '@/utils/price'
 
 use([
   CanvasRenderer,

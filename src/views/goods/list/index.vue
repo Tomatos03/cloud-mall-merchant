@@ -1,4 +1,3 @@
-```vue /home/Tomatos/Projects/ZedProjects/cloud-mall-vue/src/views/goods/index.vue
 <template>
     <div class="h-full flex flex-col p-6 bg-[#f4f7fe]">
         <!-- 顶部操作区域 -->
@@ -13,12 +12,12 @@
         <!-- 表格区域 -->
         <div class="flex-1 overflow-hidden">
             <Table :columns="columns" :data="data" height="100%" :showId="false">
-                <template #img="{ row }">
+                <template #mainImg="{ row }">
                     <div class="flex items-center justify-center">
                         <el-image
-                            v-if="row.img"
-                            :src="getImageURL(row.img)"
-                            :preview-src-list="[getImageURL(row.img)]"
+                            v-if="row.mainImg"
+                            :src="row.mainImg"
+                            :preview-src-list="[row.mainImg]"
                             preview-teleported
                             class="w-12 h-12 rounded-lg shadow-sm border border-gray-50"
                             fit="cover"
@@ -35,16 +34,27 @@
                     </div>
                 </template>
 
-                <template #name="{ row }">
-                    <span class="font-medium text-gray-700">{{ row.name }}</span>
+                <template #goodsName="{ row }">
+                    <span class="font-medium text-gray-700">{{ row.goodsName }}</span>
                 </template>
 
                 <template #price="{ row }">
-                    <span class="text-rose-500 font-bold">￥{{ fenToYuan(row.price) }}</span>
+                    <span class="text-red-500 font-semibold">{{
+                        formatPrice(row.minPriceStr, row.maxPriceStr)
+                    }}</span>
                 </template>
 
-                <template #unit="{ row }">
-                    <span v-if="row.unit" class="text-gray-500 text-sm">{{ row.unit }}</span>
+                <template #unitName="{ row }">
+                    <span v-if="row.unitName" class="text-gray-500 text-sm">{{
+                        row.unitName
+                    }}</span>
+                    <span v-else class="text-gray-300">-</span>
+                </template>
+
+                <template #category="{ row }">
+                    <span v-if="row.categoryIdPath" class="text-gray-500 text-sm">{{
+                        categoryStore.getFirstLevelCategoryName(row.categoryIdPath)
+                    }}</span>
                     <span v-else class="text-gray-300">-</span>
                 </template>
 
@@ -57,9 +67,9 @@
                     />
                 </template>
 
-                <template #info="{ row }">
-                    <el-tooltip v-if="row.info" :content="row.info" placement="top">
-                        <div class="text-gray-400 text-xs truncate max-w-37.5">{{ row.info }}</div>
+                <template #sellPoint="{ row }">
+                    <el-tooltip v-if="row.sellPoint" :content="row.sellPoint" placement="top">
+                        <div class="text-gray-400 text-xs truncate">{{ row.sellPoint }}</div>
                     </el-tooltip>
                     <span v-else class="text-gray-300">-</span>
                 </template>
@@ -104,11 +114,7 @@
         </div>
 
         <!-- 商品详情对话框 -->
-        <GoodsDetailDialog
-            v-model="detailVisible"
-            :data="currentGoods"
-            :category-list="categoryList"
-        />
+        <GoodsDetailDialog v-if="currentGoods" v-model="detailVisible" :data="currentGoods" />
     </div>
 </template>
 
@@ -119,34 +125,33 @@
     import Table from '@/components/table/Table.vue'
     import GoodsDetailDialog from './model/GoodsDetailDialog.vue'
     import { getApi, getMerchantApi } from '@/api/client'
-    import { getCategoryTree } from '@/api/common/category'
+    import { useCategoryStore } from '@/stores/category'
     import { useUserStore } from '@/stores/user'
     import { ElMessage, ElMessageBox } from 'element-plus'
-    import { fenToYuan } from '@/utils/price'
-    import { getImageURL } from '@/utils/image'
-    import type { GoodsItem } from '@/api/common'
-    import type { CategoryItem } from '@/api/common/category'
+    import type { GoodsDetail, GoodsListItem } from '@/api/common'
+    import { formatPrice } from '@/utils/price'
 
     const userStore = useUserStore()
+    const categoryStore = useCategoryStore()
     const router = useRouter()
 
     const columns = [
-        { id: '1', label: '商品图片', key: 'img', width: 100 },
-        { id: '2', label: '商品名称', key: 'name', minWidth: 200 },
-        { id: '3', label: '价格', key: 'price', width: 120 },
-        { id: '4', label: '单位', key: 'unit', width: 80 },
-        { id: '5', label: '状态', key: 'status', width: 100 },
-        { id: '6', label: '简介', key: 'info', minWidth: 150 },
+        { id: '1', label: '商品图片', key: 'mainImg', width: 100 },
+        { id: '2', label: '商品名称', key: 'goodsName', minWidth: 200 },
+        { id: '3', label: '价格', key: 'price', width: 150 },
+        { id: '4', label: '单位', key: 'unitName', width: 80 },
+        { id: '5', label: '所属分类', key: 'category', width: 150 },
+        { id: '6', label: '是否上架', key: 'status', width: 100 },
+        { id: '7', label: '商品卖点', key: 'sellPoint', minWidth: 250 },
     ]
 
-    const data = ref<GoodsItem[]>([])
+    const data = ref<GoodsListItem[]>([])
     const page = ref(1)
     const pageSize = ref(10)
     const total = ref(0)
     const loading = ref(false)
     const detailVisible = ref(false)
-    const currentGoods = ref<GoodsItem | null>(null)
-    const categoryList = ref<CategoryItem[]>([])
+    const currentGoods = ref<GoodsDetail>()
 
     const loadData = async () => {
         loading.value = true
@@ -173,49 +178,54 @@
         loadData()
     }
 
-    const loadCategories = async () => {
-        try {
-            const res = await getCategoryTree()
-            categoryList.value = res.data || []
-        } catch (error) {
-            console.error('加载分类失败', error)
-        }
-    }
+    const onView = async (row: GoodsListItem) => {
+        // 1. 立即复用列表项的基本数据
+        const categoryPathStr =
+            row.categoryIdPath && row.categoryIdPath.length > 0
+                ? categoryStore.getCategoryPathStringByIdPath(row.categoryIdPath)
+                : '-'
 
-    const onView = async (row: GoodsItem) => {
-        const res = await getMerchantApi().getGoodsById(row.id)
-        currentGoods.value = res.data
+        currentGoods.value = row as GoodsDetail
+
         detailVisible.value = true
+        const res = await getMerchantApi().getGoodsSpecsAndSkus(row.goodsId)
+        currentGoods.value = {
+            ...currentGoods.value,
+            ...res.data,
+            categoryPath: categoryPathStr,
+        }
     }
 
     const onAdd = () => {
         router.push('/goods/publish')
     }
 
-    const onEdit = (row: GoodsItem) => {
-        router.push({ path: '/goods/publish', query: { id: row.id } })
+    const onEdit = (row: GoodsListItem) => {
+        router.push({ path: '/goods/publish', query: { id: row.goodsId } })
     }
 
-    const onDelete = (row: GoodsItem) => {
+    const onDelete = (row: GoodsListItem) => {
         ElMessageBox.confirm('确定要删除该商品吗？', '提示', {
             type: 'warning',
             confirmButtonClass: 'el-button--danger',
         }).then(async () => {
-            await getMerchantApi().deleteGoods(row.id)
+            await getMerchantApi().deleteGoods(row.goodsId)
             ElMessage.success('删除成功')
             loadData()
         })
     }
 
-    const statusOf = (row: GoodsItem) => {
+    const statusOf = (row: GoodsListItem) => {
         return !!row.status
     }
 
-    const onTogglePublished = async (row: GoodsItem & { __publishing?: boolean }, val: boolean) => {
+    const onTogglePublished = async (
+        row: GoodsListItem & { __publishing?: boolean },
+        val: boolean,
+    ) => {
         row.__publishing = true
         try {
-            const status = val ? 1 : 0
-            await getMerchantApi().updateGoodsStatus(row.id, status)
+            await getMerchantApi().updateGoodsStatus(row.goodsId, val)
             row.status = val
             ElMessage.success(val ? '已上架' : '已下架')
         } finally {
@@ -223,9 +233,9 @@
         }
     }
 
-    onMounted(() => {
+    onMounted(async () => {
+        await categoryStore.loadCategoryList()
         loadData()
-        loadCategories()
     })
 </script>
 

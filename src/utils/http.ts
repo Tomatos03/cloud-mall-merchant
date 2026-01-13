@@ -1,6 +1,11 @@
 import { useUserStore } from '@/stores/user'
 import axios from 'axios'
-import type { AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig, AxiosResponse } from 'axios'
+import type {
+    AxiosInstance,
+    AxiosRequestConfig,
+    InternalAxiosRequestConfig,
+    AxiosResponse,
+} from 'axios'
 import { ElMessage } from 'element-plus'
 
 // 响应数据接口
@@ -10,13 +15,79 @@ export interface ResponseData<T = unknown> {
     data: T
 }
 
+/**
+ * 图片处理逻辑：将相对路径转换为完整的图片URL
+ */
+const getImageBaseURL = (): string => {
+    if (import.meta.env.PROD) {
+        return import.meta.env.VITE_IMAGE_BASE_URL || window.location.origin
+    }
+    const apiBaseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:7000'
+    // 如果是相对路径，则补全域名以便 URL 解析
+    const urlStr = apiBaseURL.startsWith('http')
+        ? apiBaseURL
+        : `${window.location.origin}${apiBaseURL}`
+    const url = new URL(urlStr)
+    return `${url.protocol}//${url.host}`
+}
+
+const formatImageUrl = (url: string): string => {
+    if (typeof url !== 'string' || !url) return url
+    // 如果已经是完整URL或 Base64，直接返回
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+        return url
+    }
+    const baseURL = getImageBaseURL()
+    const path = url.startsWith('/') ? url : `/${url}`
+    return `${baseURL}${path}`
+}
+
+/**
+ * 将完整URL还原为相对路径，用于提交给后端
+ */
+
+const IMAGE_KEYS = ['url', 'img', 'avatarUrl', 'banner']
+
+/**
+ * 递归处理响应对象中的图片字段，将相对路径转为绝对路径
+ */
+const processImageUrls = (data: any): any => {
+    if (!data || typeof data !== 'object') return data
+
+    if (Array.isArray(data)) {
+        data.forEach((item) => processImageUrls(item))
+        return data
+    }
+
+    for (const key in data) {
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+            const value = data[key]
+            if (IMAGE_KEYS.includes(key) && typeof value === 'string' && value) {
+                if (key === 'imgList' || key === 'detailImages') {
+                    // 处理可能出现的逗号分隔图片列表
+                    data[key] = value
+                        .split(',')
+                        .filter(Boolean)
+                        .map((img: string) => formatImageUrl(img.trim()))
+                        .join(',')
+                } else {
+                    data[key] = formatImageUrl(value)
+                }
+            } else if (typeof value === 'object' && value !== null) {
+                processImageUrls(value)
+            }
+        }
+    }
+    return data
+}
+
 // 创建 axios 实例
 const service: AxiosInstance = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || '/api', // API 基础路径
     timeout: 15000, // 请求超时时间
     headers: {
-        'Content-Type': 'application/json;charset=UTF-8'
-    }
+        'Content-Type': 'application/json;charset=UTF-8',
+    },
 })
 
 /**
@@ -84,13 +155,14 @@ service.interceptors.request.use(
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`
         }
+
         return config
     },
     (error) => {
         // 对请求错误做些什么
         console.error('请求错误：', error)
         return Promise.reject(error)
-    }
+    },
 )
 
 // 响应拦截器
@@ -110,6 +182,11 @@ service.interceptors.response.use(
             return Promise.reject(new Error(res.message || '请求失败'))
         }
 
+        // 自动处理返回数据中的图片相对路径
+        if (res.data) {
+            processImageUrls(res.data)
+        }
+
         // 直接返回数据部分
         return response
     },
@@ -121,7 +198,7 @@ service.interceptors.response.use(
 
         ElMessage.error(message)
         return Promise.reject(error)
-    }
+    },
 )
 
 // HTTP 工具类
@@ -132,8 +209,12 @@ class Http {
      * @param params 请求参数
      * @param config 请求配置
      */
-    get<T = unknown>(url: string, params?: Record<string, unknown>, config?: AxiosRequestConfig): Promise<ResponseData<T>> {
-        return service.get<ResponseData<T>>(url, { params, ...config }).then(res => res.data)
+    get<T = unknown>(
+        url: string,
+        params?: Record<string, unknown>,
+        config?: AxiosRequestConfig,
+    ): Promise<ResponseData<T>> {
+        return service.get<ResponseData<T>>(url, { params, ...config }).then((res) => res.data)
     }
 
     /**
@@ -142,8 +223,12 @@ class Http {
      * @param data 请求数据
      * @param config 请求配置
      */
-    post<T = unknown>(url: string, data?: Record<string, unknown> | unknown, config?: AxiosRequestConfig): Promise<ResponseData<T>> {
-        return service.post<ResponseData<T>>(url, data, config).then(res => res.data)
+    post<T = unknown>(
+        url: string,
+        data?: Record<string, unknown> | unknown,
+        config?: AxiosRequestConfig,
+    ): Promise<ResponseData<T>> {
+        return service.post<ResponseData<T>>(url, data, config).then((res) => res.data)
     }
 
     /**
@@ -152,8 +237,12 @@ class Http {
      * @param data 请求数据
      * @param config 请求配置
      */
-    put<T = unknown>(url: string, data?: Record<string, unknown> | unknown, config?: AxiosRequestConfig): Promise<ResponseData<T>> {
-        return service.put<ResponseData<T>>(url, data, config).then(res => res.data)
+    put<T = unknown>(
+        url: string,
+        data?: Record<string, unknown> | unknown,
+        config?: AxiosRequestConfig,
+    ): Promise<ResponseData<T>> {
+        return service.put<ResponseData<T>>(url, data, config).then((res) => res.data)
     }
 
     /**
@@ -162,8 +251,12 @@ class Http {
      * @param data 请求数据
      * @param config 请求配置
      */
-    patch<T = unknown>(url: string, data?: Record<string, unknown> | unknown, config?: AxiosRequestConfig): Promise<ResponseData<T>> {
-        return service.patch<ResponseData<T>>(url, data, config).then(res => res.data)
+    patch<T = unknown>(
+        url: string,
+        data?: Record<string, unknown> | unknown,
+        config?: AxiosRequestConfig,
+    ): Promise<ResponseData<T>> {
+        return service.patch<ResponseData<T>>(url, data, config).then((res) => res.data)
     }
 
     /**
@@ -172,10 +265,13 @@ class Http {
      * @param params 请求参数
      * @param config 请求配置
      */
-    delete<T = unknown>(url: string, params?: Record<string, unknown>, config?: AxiosRequestConfig): Promise<ResponseData<T>> {
-        return service.delete<ResponseData<T>>(url, { params, ...config }).then(res => res.data)
+    delete<T = unknown>(
+        url: string,
+        params?: Record<string, unknown>,
+        config?: AxiosRequestConfig,
+    ): Promise<ResponseData<T>> {
+        return service.delete<ResponseData<T>>(url, { params, ...config }).then((res) => res.data)
     }
-
 }
 
 // 导出 HTTP 实例

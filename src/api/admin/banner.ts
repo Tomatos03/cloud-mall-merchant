@@ -6,14 +6,12 @@ const PREFIX = '/admin'
 export interface BannerItem {
     // 后端 id（Long）在前端保留为 string，便于与后端反序列化器对接
     id: string
-    title: string
-    info: string
     imageUrl: string
     // 关联商品ID（后端为 Long，但前端以 string 接收并保留原始值）
     goodsId: string
     // 关联商品名称（后端必返，便于列表展示）
     goodsName: string
-    // 后端返回 Boolean
+    // 是否被推荐
     isRecommend: boolean
 }
 

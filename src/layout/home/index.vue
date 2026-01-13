@@ -187,6 +187,23 @@
     }
 
     /**
+     * 递归处理菜单项的路径，支持多层嵌套
+     */
+    const processMenuItemPath = (item: MenuItem, basePath: string): MenuItem => {
+        const fullPath = resolvePath(basePath, item.routePath)
+        const processed = { ...item, routePath: fullPath }
+
+        // 递归处理子菜单
+        if (item.children && item.children.length > 0) {
+            processed.children = item.children.map((child) =>
+                processMenuItemPath(child, fullPath)
+            )
+        }
+
+        return processed
+    }
+
+    /**
      * 处理菜单数据
      * 1. 处理 Layout 提升逻辑：如果顶级菜单是 Layout，则将其子菜单提升到顶层显示
      * 2. 确保所有菜单项的 path 都是完整的绝对路径，以便与 route.path 匹配
@@ -198,23 +215,14 @@
         rawMenus.forEach((item: MenuItem) => {
             if (item.type === 'layout' && item.children && item.children.length > 0) {
                 item.children.forEach((child: MenuItem) => {
-                    const fullPath = resolvePath(item.routePath, child.routePath)
-                    const processedChild = { ...child, path: fullPath }
-
-                    // 处理子菜单的路径
-                    if (child.children && child.children.length > 0) {
-                        processedChild.children = child.children.map((grandChild: MenuItem) => ({
-                            ...grandChild,
-                            path: resolvePath(fullPath, grandChild.routePath),
-                        }))
-                    }
-                    result.push(processedChild)
+                    result.push(processMenuItemPath(child, item.routePath))
                 })
             } else {
-                // 顶级菜单项，确保路径是绝对的
-                result.push({ ...item })
+                // 非 Layout 类型的顶级菜单项
+                result.push(processMenuItemPath(item, ''))
             }
         })
+        console.log(result);
         return result
     })
 </script>

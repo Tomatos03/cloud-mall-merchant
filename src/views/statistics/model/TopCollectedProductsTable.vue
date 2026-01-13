@@ -16,7 +16,7 @@
       <el-table-column label="商品信息" min-width="300">
         <template #default="{ row }">
           <div class="flex items-center">
-            <el-image :src="getImageURL(row.goodsImage)" class="w-10 h-10 rounded-lg mr-3" fit="cover" />
+            <el-image :src="row.goodsImage" class="w-10 h-10 rounded-lg mr-3" fit="cover" />
             <span class="font-medium text-gray-700">{{ row.goodsName }}</span>
           </div>
         </template>
@@ -29,7 +29,7 @@
 
 <script setup lang="ts">
 import type { TopCollectedProduct } from '@/api/common/statistics'
-import { getImageURL } from '@/utils/image'
+
 
 interface Props {
   topCollectedProducts: TopCollectedProduct[]

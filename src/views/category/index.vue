@@ -7,7 +7,7 @@
                 type="primary"
                 style="margin-left: 8px"
                 :loading="loading"
-                @click="loadCategoryList"
+                @click="loadCategoryTree"
             >
                 刷新分类
             </el-button>
@@ -16,7 +16,7 @@
         <!-- 分类表格 -->
         <el-table
             v-loading="loading"
-            :data="categoryList"
+            :data="categoryTree"
             row-key="id"
             border
             :tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
@@ -25,8 +25,8 @@
             <el-table-column prop="name" label="分类名称" min-width="200" />
             <el-table-column prop="status" label="状态" width="120" align="center">
                 <template #default="{ row }">
-                    <el-tag :type="row.status === 1 || row.status === true ? 'success' : 'info'">
-                        {{ row.status === 1 || row.status === true ? '启用' : '禁用' }}
+                    <el-tag :type="normalizeStatus(row.status) === 1 ? 'success' : 'info'">
+                        {{ normalizeStatus(row.status) === 1 ? '启用' : '禁用' }}
                     </el-tag>
                 </template>
             </el-table-column>
@@ -71,7 +71,7 @@
                 <el-form-item label="状态" prop="status">
                     <el-radio-group
                         v-model="formData.status"
-                        :disabled="!formData.id && formData.parentId && formData.parentStatus === 0"
+                        :disabled="!formData.id && formData.parentId && normalizeStatus(formData.parentStatus) === 0"
                     >
                         <el-radio :label="1">正常启用</el-radio>
                         <el-radio :label="0">禁用</el-radio>
@@ -112,11 +112,11 @@
 
     // 表单数据类型
     interface FormData extends CategoryFormData {
-        parentStatus?: number | string
+        parentStatus?: number | boolean
     }
 
-    // 分类列表数据
-    const categoryList = ref<Category[]>([])
+    // 分类树数据
+    const categoryTree = ref<Category[]>([])
     const loading = ref(false)
     const submitLoading = ref(false)
 
@@ -159,22 +159,18 @@
         ],
     }
 
+    // 标准化状态值（处理布尔和数字类型）
+    const normalizeStatus = (status?: number | boolean): number => {
+        if (status === undefined || status === null) return 1
+        if (typeof status === 'boolean') {
+            return status ? 1 : 0
+        }
+        return status === 0 ? 0 : 1
+    }
+
     // 判断是否可以添加子分类（最多三级）
     const canAddChild = (row: Category): boolean => {
         return Number(row.level ?? 0) < 3
-    }
-
-    // 递归查找父分类
-    const findParentCategory = (list: Category[], id?: string | number): Category | null => {
-        if (id === undefined || id === null) return null
-        for (const item of list) {
-            if (String(item.id) === String(id)) return item
-            if (item.children) {
-                const found = findParentCategory(item.children, id)
-                if (found) return found
-            }
-        }
-        return null
     }
 
     // 打开添加对话框
@@ -186,39 +182,15 @@
         }
 
         // 重置表单
-        // 将父分类的 status 统一转换为数字类型
-        let parentStatusValue: number | undefined = undefined
-        if (parent?.status !== undefined && parent?.status !== null) {
-            if (typeof parent.status === 'boolean') {
-                parentStatusValue = parent.status ? 1 : 0
-            } else {
-                parentStatusValue = parent.status
-            }
-        }
-
-        // 使用直接赋值确保响应式更新
         formData.id = undefined
         formData.name = ''
-        // 根据父分类状态设置默认值
-        let defaultStatus = 1
-        if (parent) {
-            if (typeof parent.status === 'boolean') {
-                defaultStatus = parent.status ? 1 : 0
-            } else {
-                defaultStatus = parent.status === 0 ? 0 : 1
-            }
-        }
-        formData.status = defaultStatus
+        formData.status = parent ? normalizeStatus(parent.status) : 1
         formData.sort = 1
         formData.parentId = parent ? parent.id : null
         formData.level = parent ? Number(parent.level ?? 0) + 1 : 1
-        formData.parentStatus = parentStatusValue
+        formData.parentStatus = parent?.status
 
-        if (parent) {
-            parentCategoryName.value = parent.name
-        } else {
-            parentCategoryName.value = ''
-        }
+        parentCategoryName.value = parent?.name || ''
 
         // 清除验证
         formRef.value?.clearValidate()
@@ -227,44 +199,22 @@
 
     // 编辑分类
     const editCategory = async (row: Category) => {
-        // 将 status 统一转换为数字类型 0 或 1
-        // 处理布尔类型和数字类型
-        let statusValue: number = 1
-        if (row.status !== undefined && row.status !== null) {
-            if (typeof row.status === 'boolean') {
-                statusValue = row.status ? 1 : 0
-            } else {
-                statusValue = row.status === 0 ? 0 : 1
-            }
-        }
-
-        // 查找并转换父分类状态
-        let parentStatusValue: number | undefined = undefined
-        if (row.parentId != null) {
-            const parent = findParentCategory(categoryList.value, row.parentId)
-            if (parent) {
-                // 转换父分类状态为数字类型
-                if (typeof parent.status === 'boolean') {
-                    parentStatusValue = parent.status ? 1 : 0
-                } else {
-                    parentStatusValue = parent.status
-                }
-                parentCategoryName.value = parent.name
-            } else {
-                parentCategoryName.value = ''
-            }
-        } else {
-            parentCategoryName.value = ''
-        }
-
-        // 使用直接赋值确保响应式更新
         formData.id = row.id
         formData.name = row.name
-        formData.status = statusValue
+        formData.status = normalizeStatus(row.status)
         formData.sort = row.sort ?? 1
         formData.parentId = row.parentId ?? null
         formData.level = Number(row.level ?? 1)
-        formData.parentStatus = parentStatusValue
+
+        // 如果有父级，获取父级的状态
+        if (row.parentId) {
+            const parent = findCategoryInTree(categoryTree.value, row.parentId)
+            formData.parentStatus = parent?.status
+            parentCategoryName.value = parent?.name || ''
+        } else {
+            formData.parentStatus = undefined
+            parentCategoryName.value = ''
+        }
 
         // 等待下一个 tick 确保数据更新完成
         await nextTick()
@@ -272,8 +222,20 @@
         // 清除验证
         formRef.value?.clearValidate()
 
-        // 最后打开对话框
+        // 打开对话框
         dialogVisible.value = true
+    }
+
+    // 在树形结构中查找分类
+    const findCategoryInTree = (tree: Category[], targetId: string): Category | null => {
+        for (const item of tree) {
+            if (item.id === targetId) return item
+            if (item.children) {
+                const found = findCategoryInTree(item.children, targetId)
+                if (found) return found
+            }
+        }
+        return null
     }
 
     // 删除分类
@@ -295,11 +257,11 @@
             await api.deleteCategory(row.id)
             ElMessage.success('删除成功')
             // 重新加载数据
-            await loadCategoryList()
+            await loadCategoryTree()
         } catch (error) {
-            // 用户取消删除或接口报错
+            // 用户取消删除操作
             if (error !== 'cancel') {
-                console.error('删除失败：', error)
+                console.error('删除操作被取消')
             }
         }
     }
@@ -323,7 +285,7 @@
 
             submitLoading.value = true
 
-            // 准备提交的数据（不包含 level）
+            // 准备提交的数据
             const submitData: CategoryFormData = {
                 id: formData.id,
                 name: formData.name,
@@ -344,24 +306,20 @@
 
             dialogVisible.value = false
             // 重新加载数据
-            await loadCategoryList()
-        } catch (error) {
-            console.error('提交失败：', error)
+            await loadCategoryTree()
+            submitLoading.value = false
         } finally {
             submitLoading.value = false
         }
     }
 
-    // 加载分类列表
-    const loadCategoryList = async () => {
+    // 加载分类树
+    const loadCategoryTree = async () => {
+        loading.value = true
         try {
-            loading.value = true
             const api = getAdminApi()
-            const response = await api.getCategoryList()
-            categoryList.value = response.data || []
-        } catch (error) {
-            console.error('加载分类列表失败：', error)
-            ElMessage.error('加载分类列表失败')
+            const response = await api.getCategoryAllTree()
+            categoryTree.value = response.data || []
         } finally {
             loading.value = false
         }
@@ -369,7 +327,7 @@
 
     // 初始化加载数据
     onMounted(() => {
-        loadCategoryList()
+        loadCategoryTree()
     })
 </script>
 

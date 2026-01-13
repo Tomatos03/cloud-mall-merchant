@@ -17,7 +17,7 @@
                 <!-- 步骤节点 -->
                 <div class="relative flex justify-between items-center">
                     <div
-                        v-for="(step, index) in ['选择发布方式', '填写商品信息', '发布完成']"
+                        v-for="(step, index) in steps"
                         :key="index"
                         class="flex flex-col items-center gap-3"
                     >
@@ -48,28 +48,29 @@
             <!-- 步骤内容区域 -->
             <div class="step-content">
                 <!-- 第一步：选择发布方式 -->
-                <Step1 v-if="publishStore.activeStep === 0" @select="handleSelectType" />
+                <Step1
+                    v-if="publishStore.activeStep === PublishStep.MODEL_SELECT"
+                    @select="handleSelectType"
+                />
 
                 <!-- 第二步：填写详细信息 -->
                 <Step2
-                    v-else-if="publishStore.activeStep === 1"
+                    v-else-if="publishStore.activeStep === PublishStep.WRITE_INFO"
                     :formData="publishStore.formData"
-                    :categoryList="publishStore.categoryList"
-                    :unitList="publishStore.unitList"
+                    :categoryList="categoryStore.categoryList"
+                    :unitList="unitStore.unitList"
                     v-model:specifications="specifications"
                     v-model:skuList="skuList"
                     v-model:displayImages="displayImages"
-                    v-model:detailImages="detailImages"
-                    :isReadonly="publishStore.isReadonly"
+                    v-model:descriptionImgList="detailImages"
                     :submitting="publishStore.submitting"
                     @prev="handlePrev"
                     @submit="submitForm"
                 />
 
-                <!-- 第三步：发布成功 -->
+                <!-- 第三步：发布完成 -->
                 <Step3
-                    v-else-if="publishStore.activeStep === 2"
-                    :isEdit="!!publishStore.formData.id"
+                    v-else-if="publishStore.activeStep === PublishStep.SUCCESS"
                     @reset="resetForm"
                 />
             </div>
@@ -79,30 +80,32 @@
 
 <script setup lang="ts">
     import { computed, onMounted, watch } from 'vue'
-    import { useRoute, useRouter } from 'vue-router'
-    import { useUserStore } from '@/stores/user'
-    import { useGoodsPublishStore } from '@/stores/goodsPublish'
+    import { useRoute } from 'vue-router'
+    import { PublishStep, useGoodsPublishStore } from '@/stores/goodsPublish'
     import { ElMessage } from 'element-plus'
     import { Check } from '@element-plus/icons-vue'
-    import { getMerchantApi } from '@/api/client'
     import Step1 from './model/Step1.vue'
     import Step2 from './model/Step2.vue'
     import Step3 from './model/Step3.vue'
+    import { useCategoryStore } from '@/stores/category'
+    import { useUnitStore } from '@/stores/unit'
 
-    const router = useRouter()
     const route = useRoute()
-    const userStore = useUserStore()
     const publishStore = useGoodsPublishStore()
+    const categoryStore = useCategoryStore()
+    const unitStore = useUnitStore()
 
-    // 局部状态同步
+    const steps = ['选择发布方式', '填写商品信息', '发布完成']
+
+    // 局部状态同步（使用计算属性简化父子通信）
     const displayImages = computed({
         get: () => publishStore.displayImages,
         set: (val) => publishStore.setDisplayImages(val),
     })
 
     const detailImages = computed({
-        get: () => publishStore.detailImages,
-        set: (val) => publishStore.setDetailImages(val),
+        get: () => publishStore.descriptionImgList,
+        set: (val) => publishStore.setDiscriptionImgList(val),
     })
 
     const specifications = computed({
@@ -115,90 +118,57 @@
         set: (val) => publishStore.setSkuList(val),
     })
 
+    /**
+     * 第一步：选择类型后进入填写页
+     */
     const handleSelectType = async (type: 'new' | 'template') => {
         if (type === 'template') {
             ElMessage.info('模板功能开发中，已为您切换至普通发布')
         }
-        await publishStore.initBaseData()
-        publishStore.setActiveStep(1)
+        publishStore.nextStep()
     }
 
+    /**
+     * 上一步逻辑
+     */
     const handlePrev = async () => {
-        if (publishStore.formData.id) {
-            router.back()
-        } else {
-            publishStore.setActiveStep(0)
+        // 如果处于重新发布模式，清理所有重新发布数据
+        if (publishStore.isRepublish) {
+            publishStore.resetPublishFlow()
+            publishStore.setActiveStep(PublishStep.MODEL_SELECT)
+            ElMessage.info('已取消重新发布')
+            return
         }
+
+        publishStore.setActiveStep(PublishStep.MODEL_SELECT)
     }
 
+    /**
+     * 重置并开始新的发布
+     */
     const resetForm = () => {
-        const storeId = userStore.storeId || 'store001'
-        const storeName = userStore.storeName || '示例店铺'
-        publishStore.resetFormData(storeId, storeName)
-        publishStore.setActiveStep(0)
+        publishStore.resetPublishFlow()
     }
 
-    const submitForm = async () => {
-        if (publishStore.displayImages.length === 0) {
-            return ElMessage.warning('请至少上传一张商品展示图(第一张是主图)')
-        }
-
-        if (!publishStore.hasValidSpec) {
-            return ElMessage.warning('请至少配置一个有效的规格组合')
-        }
-
-        publishStore.setSubmitting(true)
-
-        try {
-            const api = getMerchantApi()
-            const payload = publishStore.getSubmitPayload()
-
-            if (payload.id) {
-                await api.updateGoods(payload)
-                ElMessage.success('商品更新成功')
-            } else {
-                await api.addGoods(payload)
-                ElMessage.success('商品发布成功')
-            }
-
-            publishStore.setActiveStep(2)
-        } finally {
-            publishStore.setSubmitting(false)
-        }
-    }
-
-    const initializeStore = async () => {
-        const storeId = userStore.storeId || 'store001'
-        const storeName = userStore.storeName || '示例店铺'
-
-        // 设置店铺信息
-        publishStore.setStoreInfo(storeId, storeName)
-
-        // 初始化基础数据
-        await publishStore.initBaseData()
-
-        // 如果是编辑模式，加载商品数据
-        const goodsId = route.query.id as string
-        if (goodsId) {
-            publishStore.setReadonly(route.query.readonly === 'true')
-            await publishStore.loadGoodsData(goodsId)
-            publishStore.setActiveStep(1)
-        }
-    }
+    /**
+     * 提交表单
+     */
+    const submitForm = async () => {}
 
     onMounted(async () => {
-        await initializeStore()
+        categoryStore.loadCategoryList()
+        unitStore.loadUnitList()
     })
 
-    // 监听路由参数变化，支持刷新时重新加载
+    // 监听审核数据变化，处理重复点击重新发布的场景
+    watch(
+        () => 2,
+        async (newAuditData) => {},
+    )
+
     watch(
         () => route.query.id,
-        async (newId) => {
-            if (newId && newId !== publishStore.currentGoodsId) {
-                publishStore.setReadonly(route.query.readonly === 'true')
-                await publishStore.loadGoodsData(newId as string)
-            }
-        },
+        async (newId) => {},
     )
 </script>
 

@@ -55,7 +55,7 @@
                 <el-table-column label="商品图片" width="100" align="center">
                     <template #default="{ row }">
                         <el-image
-                            :src="getImageURL(row.img || row.imgList)"
+                            :src="row.mainImg || row.imgList"
                             class="w-12 h-12 rounded-lg shadow-sm border border-gray-50"
                             fit="cover"
                         >
@@ -89,10 +89,10 @@
 
             <div class="flex gap-3">
                 <el-button class="cancel-btn" @click="handleClose">取消</el-button>
-                <el-button 
-                    type="primary" 
+                <el-button
+                    type="primary"
                     class="confirm-btn"
-                    :disabled="!selectedRow" 
+                    :disabled="!selectedRow"
                     @click="handleConfirm"
                 >
                     确认选择
@@ -108,7 +108,6 @@
     import { Search, InfoFilled, Picture } from '@element-plus/icons-vue'
     import type { GoodsItem } from '@/api/common/goods'
     import { getAdminApi } from '@/api/client'
-    import { getImageURL } from '@/utils/image'
 
     const props = defineProps<{
         visible: boolean
@@ -157,7 +156,7 @@
             // 过滤出上架商品
             list.value = (res.data.records || []).filter((r: GoodsItem) => r.status === true)
             total.value = res.data.total
-            
+
             if (selectedId.value) {
                 const found = list.value.find((r) => r.id === selectedId.value)
                 if (found) selectedRow.value = found
@@ -193,7 +192,7 @@
         }
         emit('confirm', {
             goodsId: String(selectedRow.value.id),
-            goodsName: selectedRow.value.name,
+            goodsName: selectedRow.value.goodsName,
         })
         visibleLocal.value = false
     }

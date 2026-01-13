@@ -1,6 +1,11 @@
 import { http } from '@/utils/http'
 
-export interface UploadResponse {
+/**
+ * 本地图片项类型
+ */
+export interface Image {
+    uid: number
+    name?: string
     url: string
 }
 
@@ -9,7 +14,5 @@ export interface UploadResponse {
  * @param formData FormData 包含 file 字段
  */
 export function uploadImage(formData: FormData) {
-    return http.post<UploadResponse>('/file/upload/image', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    return http.post<Image>('/file/upload/image', formData)
 }
