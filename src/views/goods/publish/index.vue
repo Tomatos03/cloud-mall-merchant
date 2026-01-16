@@ -56,13 +56,9 @@
                 <!-- 第二步：填写详细信息 -->
                 <Step2
                     v-else-if="publishStore.activeStep === PublishStep.WRITE_INFO"
-                    :formData="publishStore.formData"
-                    :categoryList="categoryStore.categoryList"
+                    v-model:formData="publishStore.formData"
+                    :categoryList="categoryStore.categoryTree"
                     :unitList="unitStore.unitList"
-                    v-model:specifications="specifications"
-                    v-model:skuList="skuList"
-                    v-model:displayImages="displayImages"
-                    v-model:descriptionImgList="detailImages"
                     :submitting="publishStore.submitting"
                     @prev="handlePrev"
                     @submit="submitForm"
@@ -79,8 +75,6 @@
 </template>
 
 <script setup lang="ts">
-    import { computed, onMounted, watch } from 'vue'
-    import { useRoute } from 'vue-router'
     import { PublishStep, useGoodsPublishStore } from '@/stores/goodsPublish'
     import { ElMessage } from 'element-plus'
     import { Check } from '@element-plus/icons-vue'
@@ -89,34 +83,16 @@
     import Step3 from './model/Step3.vue'
     import { useCategoryStore } from '@/stores/category'
     import { useUnitStore } from '@/stores/unit'
+    import { addGoods, type GoodsSubmitPayload } from '@/api/merchant'
+    import { useUserStore } from '@/stores/user'
+    import { onMounted } from 'vue'
 
-    const route = useRoute()
     const publishStore = useGoodsPublishStore()
     const categoryStore = useCategoryStore()
     const unitStore = useUnitStore()
+    const userStore = useUserStore()
 
     const steps = ['选择发布方式', '填写商品信息', '发布完成']
-
-    // 局部状态同步（使用计算属性简化父子通信）
-    const displayImages = computed({
-        get: () => publishStore.displayImages,
-        set: (val) => publishStore.setDisplayImages(val),
-    })
-
-    const detailImages = computed({
-        get: () => publishStore.descriptionImgList,
-        set: (val) => publishStore.setDiscriptionImgList(val),
-    })
-
-    const specifications = computed({
-        get: () => publishStore.specifications,
-        set: (val) => publishStore.setSpecifications(val),
-    })
-
-    const skuList = computed({
-        get: () => publishStore.skuList,
-        set: (val) => publishStore.setSkuList(val),
-    })
 
     /**
      * 第一步：选择类型后进入填写页
@@ -153,23 +129,29 @@
     /**
      * 提交表单
      */
-    const submitForm = async () => {}
+    const submitForm = async () => {
+        publishStore.setSubmitting(true)
+        try {
+            if (userStore.storeId == null) {
+                throw new Error('商户未关联店铺，无法发布商品')
+            }
 
-    onMounted(async () => {
-        categoryStore.loadCategoryList()
-        unitStore.loadUnitList()
+            if (!publishStore.formData.mainImg) {
+                throw new Error('请上传商品主图')
+            }
+
+            publishStore.formData.storeId = userStore.storeId
+            await addGoods(publishStore.formData as GoodsSubmitPayload)
+            ElMessage.success('商品发布成功')
+            publishStore.nextStep()
+        } finally {
+            publishStore.setSubmitting(false)
+        }
+    }
+
+    onMounted(() => {
+        publishStore.checkAndResetIfNecessary()
     })
-
-    // 监听审核数据变化，处理重复点击重新发布的场景
-    watch(
-        () => 2,
-        async (newAuditData) => {},
-    )
-
-    watch(
-        () => route.query.id,
-        async (newId) => {},
-    )
 </script>
 
 <style scoped>

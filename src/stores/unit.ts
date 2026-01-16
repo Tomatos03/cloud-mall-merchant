@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { fetchUnitList, type Unit } from '@/api/common/unit'
+import { type Unit } from '@/api/common/unit'
+import { fetchUnitList } from '@/api/merchant/unit'
 
 export const useUnitStore = defineStore('unit', () => {
     const loading = ref(false)

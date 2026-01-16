@@ -69,15 +69,6 @@ export async function fetchGoodsPageGeneral(params: GoodsPageParams) {
 }
 
 /**
- * 添加商品
- * @param data 商品数据
- */
-export function addGoods(data: Omit<GoodsItem, 'id'>) {
-    // 直接将前端对象发送给后端，后端负责字段解析
-    return http.post<GoodsItem>('/goods', data)
-}
-
-/**
  * 更新商品
  * @param data 商品数据（包含 id）
  */

@@ -12,7 +12,6 @@
                     <div class="flex items-center gap-2">
                         <el-icon class="text-orange-500"><Shop /></el-icon>
                         <span class="font-bold text-sm text-gray-700">{{ store.storeName }}</span>
-                        <!-- 补充：店铺订单状态 -->
                         <el-tag size="small" :type="getStatusInfo(store.status).type" class="ml-1">
                             {{ getStatusInfo(store.status).label }}
                         </el-tag>

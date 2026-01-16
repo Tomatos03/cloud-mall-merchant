@@ -61,11 +61,11 @@
 <script setup lang="ts">
     import { ref, onMounted } from 'vue'
     import Table from '@/components/table/Table.vue'
-    import type { UnitItem } from '@/api/admin/unit'
     import { Plus, Delete } from '@element-plus/icons-vue'
     import { ElMessage, ElMessageBox } from 'element-plus'
     import { getAdminApi } from '@/api/client'
     import UnitFormDialog from './model/UnitFormDialog.vue'
+    import type { UnitItem } from '@/api/common/unit'
 
     const columns = [
         { id: '1', label: '单位名称', key: 'name' },
@@ -73,7 +73,7 @@
         { id: '2', label: '状态', key: 'status' },
     ]
 
-    let isInit = true;
+    let isInit = true
     const data = ref<UnitItem[]>([])
     const page = ref(1)
     const pageSize = ref(10)
@@ -85,7 +85,7 @@
         const res = await api.fetchUnitPage({ page: page.value, pageSize: pageSize.value })
         data.value = res.data.records
         total.value = Number(res.data.total) || 0
-        isInit = false;
+        isInit = false
     }
 
     const handlePageChange = (val: number) => {
@@ -134,15 +134,11 @@
             return
         }
 
-        await ElMessageBox.confirm(
-            `确定要删除选中的 ${selectList.value.length} 项吗？`,
-            '提示',
-            {
-                confirmButtonText: '确定',
-                cancelButtonText: '取消',
-                type: 'warning',
-            },
-        )
+        await ElMessageBox.confirm(`确定要删除选中的 ${selectList.value.length} 项吗？`, '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning',
+        })
 
         const ids = selectList.value.map((item) => item.id)
         const api = getAdminApi()
@@ -160,15 +156,11 @@
     }
 
     const onDelete = async (row: UnitItem) => {
-        await ElMessageBox.confirm(
-            `确定要删除 "${row.name}" 吗？`,
-            '提示',
-            {
-                confirmButtonText: '确定',
-                cancelButtonText: '取消',
-                type: 'warning',
-            },
-        )
+        await ElMessageBox.confirm(`确定要删除 "${row.name}" 吗？`, '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning',
+        })
 
         const api = getAdminApi()
         await api.deleteUnit(String(row.id))
@@ -179,7 +171,7 @@
     const statusLoading = ref<Record<string, boolean>>({})
 
     const toggleStatus = async (id: string | number, newStatus: 0 | 1) => {
-        if (isInit) return;
+        if (isInit) return
 
         const key = String(id)
         statusLoading.value[key] = true
@@ -204,5 +196,3 @@
         loadData()
     })
 </script>
-
-<style scoped></style>

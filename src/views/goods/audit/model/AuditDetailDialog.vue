@@ -13,7 +13,7 @@
             class="max-h-[75vh] overflow-y-auto custom-scrollbar px-6 py-4"
         >
             <!-- 管理员视角组件 -->
-            <audit-admin-view v-if="isAdmin" :data="convertToAuditGoodsData(data)" />
+            <audit-admin-view v-if="isAdmin" :data="data" />
 
             <!-- 商家视角组件 -->
             <audit-merchant-view v-else :data="data" @edit="handleEdit" @close="handleClose" />
@@ -48,7 +48,7 @@
     import { useRouter } from 'vue-router'
     import { ElMessageBox, ElMessage } from 'element-plus'
     import { getAdminApi } from '@/api/client'
-    import AuditAdminView, { type AuditGoodsData } from './AuditAdminView.vue'
+    import AuditAdminView from './AuditAdminView.vue'
     import AuditMerchantView, { type GoodsAuditInfo } from './AuditMerchantView.vue'
 
     interface Props {
@@ -69,28 +69,12 @@
 
     const loading = ref(false)
 
-    const handleEdit = (goods: any) => {
+    const handleEdit = (goods: GoodsAuditInfo) => {
         visible.value = false
         router.push({
             path: '/goods/publish',
-            query: { id: goods.id },
+            query: { id: goods.goodsId },
         })
-    }
-
-    const convertToAuditGoodsData = (data: GoodsAuditInfo): AuditGoodsData => {
-        return {
-            mainImg: data.mainImg,
-            imgList: data.imgList ?? [],
-            descriptionImgList: data.descriptionImgList,
-            auditStatus: data.auditStatus,
-            createTime: data.createTime,
-            applicantName: data.applicantName,
-            auditorName: data.auditorName,
-            reason: data.reason,
-            goodsName: data.goodsName,
-            sellPoint: data.sellPoint,
-            specifications: data.specifications,
-        }
     }
 
     const handlePass = async () => {

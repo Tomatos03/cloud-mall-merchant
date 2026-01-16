@@ -10,9 +10,9 @@
                 <template #mainImg="{ row }">
                     <div class="flex items-center justify-center">
                         <el-image
-                            v-if="row.mainImg"
-                            :src="row.mainImg"
-                            :preview-src-list="[row.mainImg]"
+                            v-if="row.mainImg?.url"
+                            :src="row.mainImg.url"
+                            :preview-src-list="[row.mainImg.url]"
                             preview-teleported
                             class="w-12 h-12 rounded-lg shadow-sm border border-gray-50"
                             fit="cover"
@@ -183,7 +183,7 @@
             // 解析 extraInfo 中的商品数据
             const records = (res.data.records || []).map((item: AuditLogVO): GoodsAuditInfo => {
                 try {
-                    let goodsInfo = JSON.parse(item.extraInfo)
+                    const goodsInfo = JSON.parse(item.extraInfo)
 
                     return {
                         ...goodsInfo,
@@ -297,6 +297,9 @@
 
         if (!row.storeName || !row.sellPoint) {
             throw new Error('storeName or sellPoint is missing')
+        }
+        if (!row.mainImg) {
+            throw new Error('mainImg is missing')
         }
         auditRejectDialogRef.value.setData(
             row.auditId,

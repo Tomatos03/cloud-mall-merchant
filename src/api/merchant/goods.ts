@@ -9,6 +9,7 @@ import type {
     GoodsExtraInfo,
     GoodsSubmitPayload,
 } from '../common/goods'
+import type { UnitItem } from '../common/unit'
 
 /**
  * 商家查询商品列表（只能查看自己店铺的商品）
@@ -36,18 +37,8 @@ export function addGoods(data: GoodsSubmitPayload) {
 /**
  * 商家重新发布审核驳回/撤回的商品
  */
-export function republishGoodsFromAudit(auditId: string, data: GoodsInfo) {
+export function republishGoodsFromAudit(auditId: string, data: GoodsSubmitPayload) {
     return http.post<void>(`/merchant/goods/republish/${auditId}`, data)
-}
-
-/**
- * 商家更新商品信息
- */
-export function updateGoods(data: GoodsInfo) {
-    if (!data || data.id === undefined || data.id === null || data.id === '') {
-        return Promise.reject(new Error('updateGoods: id is required'))
-    }
-    return http.put<void>('/merchant/goods', data)
 }
 
 /**
@@ -68,7 +59,7 @@ export function updateGoodsStatus(goodsId: string, status: boolean) {
  * 获取商品单位列表
  */
 export function getGoodsUnitList() {
-    return http.get<GoodsUnit[]>('/merchant/goods/units')
+    return http.get<UnitItem[]>('/merchant/goods/units')
 }
 
 // 导出公共类型
@@ -76,10 +67,8 @@ export type {
     GoodsListItem,
     GoodsPageParams,
     GoodsPageResult,
-    GoodsUnit,
     GoodsSkuSpec,
     GoodsSpecification,
     GoodsSkuItem,
-    GoodsInfo as GoodsSubmitPayload,
     GoodsExtraInfo as GoodsSpecsAndSkus,
 }

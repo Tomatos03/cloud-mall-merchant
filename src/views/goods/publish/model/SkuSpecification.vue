@@ -3,14 +3,6 @@
         <template #header>
             <div class="flex justify-between items-center">
                 <div class="font-bold text-lg text-gray-800">规格与库存设置</div>
-                <div v-if="!isReadonly && internalSkuList.length > 0" class="flex gap-3">
-                    <el-button size="small" @click="batchSet('price')" icon="Edit">
-                        批量设置价格
-                    </el-button>
-                    <el-button size="small" @click="batchSet('inventory')" icon="Box">
-                        批量设置库存
-                    </el-button>
-                </div>
             </div>
         </template>
 
@@ -59,7 +51,7 @@
                             <div v-if="!isReadonly" class="inline-block">
                                 <el-input
                                     v-if="specInputStates[index]?.visible"
-                                    :ref="(el) => (inputRefs[index] = el)"
+                                    :ref="(el: InputInstance) => (inputRefs[index] = el)"
                                     v-model="specInputStates[index].value"
                                     size="small"
                                     class="w-24"
@@ -87,7 +79,17 @@
 
             <!-- SKU 组合列表部分 -->
             <div class="border-t border-gray-100 pt-8">
-                <div class="text-sm font-bold text-gray-600 mb-6">SKU 组合列表</div>
+                <div class="flex justify-between items-center mb-6">
+                    <div class="text-sm font-bold text-gray-600">SKU 组合列表</div>
+                    <div v-if="!isReadonly && internalSkuList.length > 0" class="flex gap-3">
+                        <el-button size="small" @click="batchSet('price')" icon="Edit">
+                            批量设置价格
+                        </el-button>
+                        <el-button size="small" @click="batchSet('inventory')" icon="Box">
+                            批量设置库存
+                        </el-button>
+                    </div>
+                </div>
                 <el-table
                     :data="internalSkuList"
                     border
@@ -299,7 +301,7 @@
     )
 
     const batchSet = (field: 'price' | 'inventory') => {
-        const label = field === 'price' ? '价格 (分)' : '库存'
+        const label = field === 'price' ? '价格 (单位:元)' : '库存'
         ElMessageBox.prompt(`请输入统一的${label}`, '批量设置', {
             confirmButtonText: '确定',
             cancelButtonText: '取消',

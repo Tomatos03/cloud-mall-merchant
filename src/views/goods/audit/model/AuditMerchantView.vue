@@ -114,15 +114,15 @@
                 </div>
                 <div class="flex flex-wrap gap-3">
                     <div
-                        v-for="(img, i) in allImages"
+                        v-for="(imgUrl, i) in allImageUrls"
                         :key="i"
                         class="relative w-24 h-24 rounded-lg border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                     >
                         <el-image
-                            :src="img"
+                            :src="imgUrl"
                             fit="cover"
                             class="w-full h-full cursor-zoom-in"
-                            :preview-src-list="allImages"
+                            :preview-src-list="allImageUrls"
                             :initial-index="i"
                             preview-teleported
                         />
@@ -143,15 +143,15 @@
                 </div>
                 <div class="flex flex-wrap gap-3">
                     <div
-                        v-for="(img, i) in descriptionImgList"
+                        v-for="(imgUrl, i) in descriptionImageUrls"
                         :key="i"
                         class="relative w-24 h-24 rounded-lg border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                     >
                         <el-image
-                            :src="img"
+                            :src="imgUrl"
                             fit="cover"
                             class="w-full h-full cursor-zoom-in"
-                            :preview-src-list="descriptionImgList"
+                            :preview-src-list="descriptionImageUrls"
                             :initial-index="i"
                             preview-teleported
                         />
@@ -174,18 +174,22 @@
                     <!-- 规格映射 -->
                     <div
                         v-if="data.specifications && data.specifications.length > 0"
-                        class="bg-gray-50/20 rounded border border-gray-100 divide-y divide-gray-100"
+                        class="rounded border border-gray-100 divide-y divide-gray-100 overflow-hidden"
                     >
                         <div
                             v-for="spec in data.specifications"
                             :key="spec.name"
-                            class="flex items-center gap-4 p-3 text-xs"
+                            class="flex text-xs"
                         >
-                            <span class="w-16 text-gray-500 shrink-0">{{ spec.name }}</span>
-                            <div class="flex flex-wrap gap-2">
+                            <div
+                                class="w-30 bg-slate-50 text-slate-500 shrink-0 px-4 py-3 font-medium flex items-center border-r border-gray-100"
+                            >
+                                {{ spec.name }}
+                            </div>
+                            <div class="flex-1 flex flex-wrap gap-2 p-3 bg-white items-center">
                                 <el-tag
-                                    v-for="val in spec.values"
-                                    :key="val"
+                                    v-for="(val, index) in spec.values"
+                                    :key="index"
                                     size="small"
                                     class="rounded"
                                     >{{ val }}</el-tag
@@ -297,44 +301,30 @@
         { id: '3', label: '可用库存', key: 'inventory' },
     ]
 
-    const descriptionImgList = computed(() => {
-        if (!props.data.descriptionImgList) {
-            throw new Error('descriptionImgList is empty')
+    const allImageUrls = computed(() => {
+        const urls: string[] = [props.data.mainImg.url]
+        if (props.data.imgList) {
+            urls.push(...props.data.imgList.map((img) => img.url))
         }
-        return props.data.descriptionImgList.split(',')
+        return urls
     })
 
-    const allImages = computed(() => {
-        const imgs: string[] = [props.data.mainImg]
-        const imgList = props.data.imgList?.split(',') ?? []
-        imgs.push(...imgList)
-        return imgs
+    const descriptionImageUrls = computed(() => {
+        return props.data.descriptionImgList.map((img) => img.url)
     })
 
-    /**
-     * 获取容器样式类
-     */
     function getStatusContainerClass(status: AuditStatus): string {
         return auditStatusMap[status].containerClass
     }
 
-    /**
-     * 获取图标样式类
-     */
     function getStatusIconClass(status: AuditStatus): string {
         return auditStatusMap[status].iconClass
     }
 
-    /**
-     * 获取状态标题
-     */
     function getStatusTitle(status: AuditStatus): string {
         return auditStatusMap[status].title
     }
 
-    /**
-     * 获取状态描述
-     */
     function getStatusDescription(status: AuditStatus): string {
         if (status === 2) {
             return props.data.reason || '描述不符合规范，请根据反馈进行调整'
@@ -342,9 +332,6 @@
         return auditStatusMap[status].description
     }
 
-    /**
-     * 获取状态时间显示
-     */
     function getStatusTime(status: AuditStatus): string {
         switch (status) {
             case 0:
@@ -359,9 +346,6 @@
         }
     }
 
-    /**
-     * 获取按钮文本
-     */
     function getButtonText(status: AuditStatus): string {
         return auditStatusMap[status].buttonText
     }

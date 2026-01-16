@@ -1,10 +1,14 @@
 import { defineStore } from 'pinia'
 import { useCategoryStore } from './category'
-import type { GoodsSubmitPayload } from '@/api/merchant/goods'
 import type { GoodsAuditInfo } from '@/views/goods/audit/model/AuditMerchantView.vue'
-import type { AuditStatus, GoodsSkuItem, GoodsSpecification, Image } from '@/api/common'
+import type {
+    AuditStatus,
+    GoodsSkuItem,
+    GoodsSpecification,
+    GoodsSubmitPayload,
+    Image,
+} from '@/api/common'
 import { useUnitStore } from './unit'
-import { th } from 'element-plus/es/locale/index.mjs'
 
 /**
  * 商品发布步骤枚举
@@ -36,6 +40,12 @@ export interface GoodsPublishState {
     currentAuditStatus?: AuditStatus
 }
 
+const DEFAULT_MAIN_IMAGE: Image = {
+    url: '',
+    uid: -1,
+    name: '',
+}
+
 /**
  * 商品发布页面专用 Store
  * - 用于管理商品发布流程中的所有状态
@@ -46,11 +56,17 @@ export interface GoodsPublishState {
 export const useGoodsPublishStore = defineStore('goodsPublish', {
     state: (): GoodsPublishState => ({
         formData: {
+            goodsName: '',
             status: true,
+            mainImg: DEFAULT_MAIN_IMAGE,
             imgList: [],
             descriptionImgList: [],
             specifications: [],
             skus: [],
+            categoryId: '',
+            unitId: '',
+            sellPoint: '',
+            storeId: '',
         },
         activeStep: PublishStep.MODEL_SELECT,
         submitting: false,
@@ -69,43 +85,43 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
             return !!state.currentAuditId
         },
         descriptionImgList: (state): Image[] => {
-            return state.formData.descriptionImgList
+            return state.formData.descriptionImgList || []
         },
         specifications: (state): GoodsSpecification[] => {
-            return state.formData.specifications
+            return state.formData.specifications || []
         },
         skuList: (state): GoodsSkuItem[] => {
-            return state.formData.skus
+            return state.formData.skus || []
         },
         displayImages: (state): Image[] => {
-            return state.formData.mainImg
+            const images: Image[] = []
+            // 如果mainImg存在且有url，添加为第一张
+            if (state.formData.mainImg?.url) {
+                images.push(state.formData.mainImg)
+            }
+            // 添加其他展示图
+            if (state.formData.imgList && state.formData.imgList.length > 0) {
+                images.push(...state.formData.imgList)
+            }
+            return images
         },
     },
 
     actions: {
-        setSpecifications(specs: GoodsSpecification[]) {
-            this.formData.specifications = specs
-        },
-        setSkuList(skus: GoodsSkuItem[]) {
-            this.formData.skus = skus
-        },
-        setDiscriptionImgList(imgList: Image[]) {
-            this.formData.descriptionImgList = imgList
-        },
-        setDisplayImages(imgList: Image[]) {
-            this.formData.mainImg = imgList[0]
-            this.formData.imgList = [...imgList.slice(1)]
-        },
         /**
-         * 设置审核驳回的商品数据（用于重新发布）
-         * 直接调用 loadAuditDataForRepublish 方法来完整加载审核数据
+         * 统一的表单数据更新方法
+         * 替代之前的多个单独 setter（setSpecifications, setSkuList 等）
+         * @param data 要更新的表单数据（支持部分更新）
          */
-        setFormDataForRepublish(auditData: GoodsAuditInfo) {
-            this.currentAuditId = auditData.auditId
-            this.setFormData(auditData)
+        updateFormData(data: Partial<GoodsSubmitPayload>) {
+            this.formData = {
+                ...this.formData,
+                ...data,
+            }
         },
+
         /**
-         * 设置表单数据
+         * 设置表单数据（用于初始化或完全替换）
          */
         setFormData(data: GoodsSubmitPayload) {
             this.loading = true
@@ -130,13 +146,42 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
         },
 
         /**
+         * 设置审核驳回的商品数据（用于重新发布）
+         * 直接调用 setFormData 方法来完整加载审核数据
+         */
+        setFormDataForRepublish(auditData: GoodsAuditInfo) {
+            this.currentAuditId = auditData.auditId
+            this.setFormData(auditData)
+        },
+
+        isFormDataEmpty(): boolean {
+            const { formData } = this
+            return (
+                !formData.goodsName?.trim() &&
+                !formData.categoryId &&
+                !formData.unitId &&
+                !formData.sellPoint?.trim() &&
+                !formData.mainImg?.url &&
+                (!formData.imgList || formData.imgList.length === 0) &&
+                (!formData.descriptionImgList || formData.descriptionImgList.length === 0) &&
+                (!formData.specifications || formData.specifications.length === 0) &&
+                (!formData.skus || formData.skus.length === 0)
+            )
+        },
+        /**
          * 设置当前步骤
          */
         setActiveStep(step: PublishStep) {
             this.activeStep = step
         },
+        ensureLoadBaseData() {
+            this.initBaseData()
+        },
         async initBaseData() {
-            Promise.all([useCategoryStore().loadCategoryList(), useUnitStore().loadUnitList()])
+            await Promise.all([
+                useCategoryStore().loadCategoryTree(),
+                useUnitStore().loadUnitList(),
+            ])
         },
 
         /**
@@ -171,18 +216,16 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
         },
 
         /**
-         * 获取提交的完整数据
-         * 注意：需要清理多余字段，确保数据结构符合后端要求
-         */
-        getSubmitPayload(): GoodsSubmitPayload {},
-
-        /**
          * 检查并重置成功状态
          * 供页面初始化时调用，替代无法使用的 afterRestore 钩子
          */
         checkAndResetIfNecessary() {
-            if (this.activeStep === PublishStep.SUCCESS) {
+            if (
+                this.activeStep === PublishStep.SUCCESS ||
+                (this.activeStep === PublishStep.WRITE_INFO && this.isFormDataEmpty())
+            ) {
                 this.resetPublishFlow()
+                this.setActiveStep(PublishStep.MODEL_SELECT)
             }
         },
     },

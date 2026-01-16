@@ -14,5 +14,9 @@ export interface Image {
  * @param formData FormData 包含 file 字段
  */
 export function uploadImage(formData: FormData) {
-    return http.post<Image>('/file/upload/image', formData)
+    return http.post<Image>('/file/upload/image', formData, {
+        headers: {
+            'Content-Type': 'image/*',
+        },
+    })
 }

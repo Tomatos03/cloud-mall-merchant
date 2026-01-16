@@ -2,7 +2,7 @@
  * 公共的分类类型定义
  */
 
-import http from "@/utils/http"
+import http from '@/utils/http'
 
 export interface CategoryItem {
     id: string
@@ -15,7 +15,11 @@ export interface CategoryItem {
     children?: CategoryItem[]
 }
 
-export type Category = CategoryItem
+export interface CategoryTree {
+    id: string
+    name: string
+    children?: CategoryTree[]
+}
 
 export interface CategoryPageParams {
     page: number
@@ -39,10 +43,9 @@ export interface CategoryFormData {
     parentId?: string | null
 }
 
-
 /**
  * 获取分类树（用于级联选择）
  */
 export function getCategoryTree() {
-  return http.get<CategoryItem[]>('/category/tree')
+    return http.get<CategoryItem[]>('/category/tree')
 }

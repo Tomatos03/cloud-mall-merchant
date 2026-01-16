@@ -22,7 +22,7 @@
         </div>
 
         <el-form
-            :model="formData"
+            :model="publishStore.formData"
             :rules="rules"
             ref="formRef"
             label-position="left"
@@ -36,7 +36,7 @@
                 <div class="px-12 py-6">
                     <el-form-item label="商品名称" prop="goodsName">
                         <el-input
-                            v-model="formData.goodsName"
+                            v-model="publishStore.formData.goodsName"
                             placeholder="请输入商品名称"
                             maxlength="30"
                             show-word-limit
@@ -45,7 +45,7 @@
                     </el-form-item>
                     <el-form-item label="商品分类" prop="categoryId">
                         <el-cascader
-                            v-model="formData.categoryId"
+                            v-model="publishStore.formData.categoryId"
                             :options="categoryList"
                             :props="{
                                 label: 'name',
@@ -59,7 +59,7 @@
                     </el-form-item>
                     <el-form-item label="商品单位" prop="unitId">
                         <el-select
-                            v-model="formData.unitId"
+                            v-model="publishStore.formData.unitId"
                             placeholder="请选择商品单位"
                             class="w-full!"
                         >
@@ -74,7 +74,7 @@
 
                     <el-form-item label="商品简介" prop="sellPoint" required>
                         <el-input
-                            v-model="formData.sellPoint"
+                            v-model="publishStore.formData.sellPoint"
                             placeholder="请输入商品详细介绍..."
                             maxlength="30"
                             show-word-limit
@@ -90,7 +90,6 @@
                                 v-model="displayFileList"
                                 item-key="uid"
                                 class="flex flex-wrap gap-4"
-                                @change="handleDisplayImageListChange"
                             >
                                 <template #item="{ element: file, index }">
                                     <li
@@ -151,7 +150,6 @@
                                 v-model="detailFileList"
                                 item-key="uid"
                                 class="flex flex-wrap gap-4"
-                                @change="handleDiscriptionImageListChange"
                             >
                                 <template #item="{ element: file, index }">
                                     <li
@@ -216,7 +214,7 @@
                         </template>
 
                         <CapsuleToggle
-                            v-model="formData.status"
+                            v-model="publishStore.formData.status"
                             :options="[
                                 { label: '立即上架', value: true },
                                 { label: '暂不上架', value: false },
@@ -272,7 +270,6 @@
     import CapsuleToggle from '@/components/CapsuleToggle.vue'
     import SkuSpecification from './SkuSpecification.vue'
     import { uploadImage, type Image } from '@/api/common/common'
-    import type { GoodsSubmitPayload, GoodsSpecification, GoodsSkuItem } from '@/api/merchant/goods'
     import type { CategoryItem } from '@/api/common/category'
     import { AuditStatus } from '@/api/common'
     import type { Unit } from '@/api/common/unit'
@@ -281,7 +278,7 @@
     interface HintConfig {
         title: string
         message: string
-        icon: any
+        icon: unknown
         containerClass: string
         iconClass: string
         titleClass: string
@@ -289,25 +286,16 @@
     }
 
     interface Props {
-        formData: GoodsSubmitPayload
         categoryList: CategoryItem[]
         unitList: Unit[]
-        specifications: GoodsSpecification[]
-        skuList: GoodsSkuItem[]
-        displayImages: Image[]
-        descriptionImgList: Image[]
         submitting: boolean
     }
-    const props = defineProps<Props>()
+    defineProps<Props>()
     const publishStore = useGoodsPublishStore()
 
     const emit = defineEmits<{
         (e: 'prev'): void
         (e: 'submit'): void
-        (e: 'update:displayImages', val: Image[]): void
-        (e: 'update:descriptionImgList', val: Image[]): void
-        (e: 'update:specifications', val: GoodsSpecification[]): void
-        (e: 'update:skuList', val: GoodsSkuItem[]): void
     }>()
 
     const handlePrevClick = async () => {
@@ -330,23 +318,27 @@
     const previewImageUrl = ref('')
 
     const displayFileList = computed({
-        get: () => props.displayImages,
-        set: (val) => emit('update:displayImages', val),
+        get: () => publishStore.displayImages,
+        set: (val) => {
+            const mainImg = val[0] || undefined
+            const imgList = val.length > 1 ? val.slice(1) : []
+            publishStore.updateFormData({ mainImg, imgList })
+        },
     })
 
     const detailFileList = computed({
-        get: () => props.descriptionImgList,
-        set: (val) => emit('update:descriptionImgList', val),
+        get: () => publishStore.descriptionImgList,
+        set: (val) => publishStore.updateFormData({ descriptionImgList: val }),
     })
 
     const internalSpecifications = computed({
-        get: () => props.specifications,
-        set: (val) => emit('update:specifications', val),
+        get: () => publishStore.specifications,
+        set: (val) => publishStore.updateFormData({ specifications: val }),
     })
 
     const internalSkuList = computed({
-        get: () => props.skuList,
-        set: (val) => emit('update:skuList', val),
+        get: () => publishStore.skuList,
+        set: (val) => publishStore.updateFormData({ skus: val }),
     })
 
     const rules = {
@@ -433,13 +425,7 @@
         previewVisible.value = true
     }
 
-    const handleDisplayImageListChange = (newImge: Image[]) => {
-        publishStore.setDisplayImages(newImge)
-    }
 
-    const handleDiscriptionImageListChange = (newImge: Image[]) => {
-        publishStore.setDiscriptionImgList(newImge)
-    }
 
     // 通用图处理逻辑
     const handleImageUpload = async (file: File) => {
@@ -502,7 +488,7 @@
         try {
             await formRef.value.validate()
             emit('submit')
-        } catch (error) {
+        } catch {
             ElMessage.error('请补全所有必填信息后再提交')
         }
     }

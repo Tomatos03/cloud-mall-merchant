@@ -1,3 +1,5 @@
+import type { Image } from './common'
+
 export enum AuditStatus {
     PENDING = 0, // 待审核
     APPROVED = 1, // 通过
@@ -77,7 +79,7 @@ export interface AuditLogVO {
 export interface AuditGoodsListItem {
     auditId: string
     goodsName: string
-    mainImg: string
+    mainImg: Image
     createTime: string
     auditStatus: AuditStatus
     sellPoint?: string

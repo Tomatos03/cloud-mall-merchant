@@ -46,7 +46,7 @@ const formatImageUrl = (url: string): string => {
  * 将完整URL还原为相对路径，用于提交给后端
  */
 
-const IMAGE_KEYS = ['url', 'img', 'avatarUrl', 'banner']
+const IMAGE_KEYS = ['url', 'img', 'avatarUrl', 'banner', 'goodsImg']
 
 /**
  * 递归处理响应对象中的图片字段，将相对路径转为绝对路径

@@ -11,8 +11,8 @@
         <div class="mb-6 p-4 bg-gray-50 rounded-lg">
             <div class="flex items-start gap-4 mb-4">
                 <el-image
-                    v-if="form.previewImg"
-                    :src="form.previewImg"
+                    v-if="form.previewImg?.url"
+                    :src="form.previewImg.url"
                     class="w-16 h-16 rounded shadow-sm shrink-0"
                     fit="cover"
                 />
@@ -64,12 +64,13 @@
     import { ref, reactive, computed } from 'vue'
     import { ElMessage } from 'element-plus'
     import { getAdminApi } from '@/api/client'
+    import type { Image } from '@/api/common/common'
 
     export interface AuditRejectDialogExposed {
         setData: (
             auditId: string,
             goodsName: string,
-            mainImg: string,
+            mainImg: Image,
             storeName: string,
             sellPoint?: string,
         ) => void
@@ -79,7 +80,7 @@
         id: string
         msg: string
         previewName: string
-        previewImg: string
+        previewImg: Image | null
         previewStore: string
         previewSellPoint: string
     }
@@ -99,7 +100,7 @@
         id: '',
         msg: '',
         previewName: '',
-        previewImg: '',
+        previewImg: null,
         previewStore: '',
         previewSellPoint: '',
     })
@@ -113,7 +114,7 @@
         form.id = ''
         form.msg = ''
         form.previewName = ''
-        form.previewImg = ''
+        form.previewImg = null
         form.previewStore = ''
         form.previewSellPoint = ''
     }
@@ -140,7 +141,7 @@
         setData: (
             id: string,
             name: string,
-            img: string,
+            img: Image,
             storeName: string,
             sellPoint: string = '',
         ) => {

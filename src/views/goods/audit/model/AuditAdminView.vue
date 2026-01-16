@@ -124,7 +124,7 @@
                         >
                         <div class="flex flex-wrap gap-3">
                             <div
-                                v-for="(img, i) in allImages"
+                                v-for="(img, i) in allImageUrls"
                                 :key="i"
                                 class="relative w-28 h-28 rounded border border-gray-100 overflow-hidden"
                             >
@@ -132,7 +132,7 @@
                                     :src="img"
                                     fit="cover"
                                     class="w-full h-full cursor-zoom-in"
-                                    :preview-src-list="allImages"
+                                    :preview-src-list="allImageUrls"
                                     :initial-index="i"
                                     preview-teleported
                                 />
@@ -153,7 +153,7 @@
                         >
                         <div class="flex flex-wrap gap-3">
                             <div
-                                v-for="(img, i) in descriptionImgList"
+                                v-for="(img, i) in descriptionImageUrls"
                                 :key="i"
                                 class="relative w-28 h-28 rounded border border-gray-100 overflow-hidden"
                             >
@@ -161,7 +161,7 @@
                                     :src="img"
                                     fit="cover"
                                     class="w-full h-full cursor-zoom-in"
-                                    :preview-src-list="descriptionImgList"
+                                    :preview-src-list="descriptionImageUrls"
                                     :initial-index="i"
                                     preview-teleported
                                 />
@@ -202,31 +202,15 @@
 </template>
 
 <script setup lang="ts">
-    import type { GoodsSpecification } from '@/api/common'
     import { computed } from 'vue'
-
-    export interface AuditGoodsData {
-        mainImg: string
-        imgList: string
-        descriptionImgList: string
-        auditStatus: number
-        applicantName: string
-        createTime: string
-        auditTime?: string
-        auditorName?: string
-        reason?: string
-        goodsName: string
-        sellPoint: string
-        specifications: GoodsSpecification[]
-    }
+    import type { GoodsAuditInfo } from './AuditMerchantView.vue'
 
     interface Props {
-        data: AuditGoodsData
+        data: GoodsAuditInfo
     }
 
     const props = defineProps<Props>()
 
-    // 审核状态配置map
     const auditStatusMap: Record<number, { label: string; colorClass: string }> = {
         0: { label: '等待处理', colorClass: 'bg-blue-500' },
         1: { label: '审核已通过', colorClass: 'bg-green-500' },
@@ -234,9 +218,6 @@
         3: { label: '已撤销', colorClass: 'bg-gray-400' },
     }
 
-    /**
-     * 获取审核状态标签
-     */
     function getStatusLabel(status: number): string {
         const auditStatus = auditStatusMap[status]
         if (!auditStatus) {
@@ -245,9 +226,6 @@
         return auditStatus.label
     }
 
-    /**
-     * 获取审核状态颜色样式
-     */
     function getStatusColorClass(status: number): string {
         const auditStatus = auditStatusMap[status]
         if (!auditStatus) {
@@ -256,18 +234,16 @@
         return auditStatus.colorClass
     }
 
-    const descriptionImgList = computed(() => {
-        if (!props.data.descriptionImgList) {
-            throw new Error('descriptionImgList is empty')
+    const allImageUrls = computed(() => {
+        const urls: string[] = [props.data.mainImg.url]
+        if (props.data.imgList) {
+            urls.push(...props.data.imgList.map(img => img.url))
         }
-        return props.data.descriptionImgList.split(',')
+        return urls
     })
 
-    const allImages = computed(() => {
-        const imgs: string[] = [props.data.mainImg]
-        const imgList = props.data.imgList?.split(',') ?? []
-        imgs.push(...imgList)
-        return imgs
+    const descriptionImageUrls = computed(() => {
+        return props.data.descriptionImgList.map(img => img.url)
     })
 </script>
 

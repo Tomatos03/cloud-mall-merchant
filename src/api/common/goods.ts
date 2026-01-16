@@ -1,4 +1,3 @@
-import type { AuditStatus } from './audit'
 import type { Image } from './common'
 
 /**
@@ -25,7 +24,6 @@ export interface GoodsSkuItem {
     price: number
     inventory: number
     status: boolean
-    priceStr?: string
 }
 
 /**
