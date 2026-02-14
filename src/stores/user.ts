@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { resetApiClient } from '@/api/client'
+
 
 // 用户状态类型定义，规定了用户状态包含哪些字段及类型
 
@@ -9,11 +9,9 @@ export interface UserState {
     nickname: string // 用户昵称
     role: string // 用户角色
     token: string // 登录令牌
-    avatarUrl?: string // 用户头像URL
-    phone?: string // 手机号
-    email?: string // 电子邮箱
-    storeId?: string // 店铺ID（商家用户）
-    storeName?: string // 店铺名称（商家用户）
+    avatarUrl: string // 用户头像URL
+    storeId: string // 店铺ID
+    storeName: string // 店铺名称
 }
 
 /**
@@ -29,14 +27,10 @@ export const useUserStore = defineStore('user', {
         role: '',
         token: '',
         avatarUrl: '',
-        phone: '',
-        email: '',
         storeId: '',
         storeName: '',
     }),
     getters: {
-        isAdmin: (state) => state.role === 'ADMIN',
-        isMerchant: (state) => state.role === 'MERCHANT',
         // 获取显示名称，优先使用昵称，其次使用用户名
         displayName: (state) => state.nickname || state.username,
     },
@@ -58,8 +52,6 @@ export const useUserStore = defineStore('user', {
          */
         updateProfile(profile: Partial<UserState>) {
             if (profile.nickname !== undefined) this.nickname = profile.nickname
-            if (profile.phone !== undefined) this.phone = profile.phone
-            if (profile.email !== undefined) this.email = profile.email
             if (profile.avatarUrl !== undefined) this.avatarUrl = profile.avatarUrl
         },
 
@@ -69,7 +61,6 @@ export const useUserStore = defineStore('user', {
         clearUser() {
             // 使用 $reset() 方法彻底重置所有用户状态，确保完全清理持久化数据
             this.$reset()
-            resetApiClient()
         },
     },
     // persist 配置用于状态持久化（依赖 pinia-plugin-persistedstate 插件）

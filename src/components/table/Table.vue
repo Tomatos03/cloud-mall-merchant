@@ -4,8 +4,11 @@
         :style="containerStyle"
     >
         <el-table
+            v-bind="$attrs"
             :data="tableData"
             :height="height"
+            :border="border"
+            :show-header="showHeader"
             style="width: 100%"
             @selection-change="handleSelectionChange"
             header-cell-class-name="custom-header-cell"
@@ -41,6 +44,8 @@
                 :prop="col.key"
                 :label="col.label"
                 :fixed="col.isFixed"
+                :width="col.width"
+                :align="col.align || 'left'"
                 show-overflow-tooltip
                 min-width="120"
             >
@@ -54,11 +59,12 @@
                 v-if="$slots.action"
                 label="操作"
                 fixed="right"
-                width="180"
+                width="280"
                 align="center"
+                min-width="280"
             >
                 <template #default="scope">
-                    <div class="flex items-center justify-center gap-2">
+                    <div class="flex items-center justify-center gap-1 flex-wrap">
                         <slot name="action" :row="scope.row" :index="scope.$index" />
                     </div>
                 </template>
@@ -66,14 +72,16 @@
 
             <!-- 自定义空状态 -->
             <template #empty>
-                <div class="flex flex-col items-center justify-center py-20">
-                    <div
-                        class="w-20 h-20 rounded-full bg-[#f8faff] flex items-center justify-center text-[#cbd5e0] mb-4"
-                    >
-                        <el-icon :size="40"><document /></el-icon>
+                <slot name="empty">
+                    <div class="flex flex-col items-center justify-center py-20">
+                        <div
+                            class="w-20 h-20 rounded-full bg-[#f8faff] flex items-center justify-center text-[#cbd5e0] mb-4"
+                        >
+                            <el-icon :size="40"><document /></el-icon>
+                        </div>
+                        <p class="text-[#a0aec0] text-sm font-medium">暂无相关数据</p>
                     </div>
-                    <p class="text-[#a0aec0] text-sm font-medium">暂无相关数据</p>
-                </div>
+                </slot>
             </template>
         </el-table>
     </div>
@@ -87,6 +95,8 @@
         label: string
         key: string
         isFixed?: boolean
+        width?: string | number
+        align?: 'left' | 'center' | 'right'
     }
 
     interface Props {
@@ -96,6 +106,8 @@
         height?: number | string
         showId?: boolean
         showSelection?: boolean
+        border?: boolean
+        showHeader?: boolean
     }
 
     const props = withDefaults(defineProps<Props>(), {
@@ -103,6 +115,8 @@
         data: () => [],
         selectList: () => [],
         showSelection: false,
+        border: false,
+        showHeader: true,
     })
 
     const emit = defineEmits<{

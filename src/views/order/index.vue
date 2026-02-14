@@ -1,11 +1,7 @@
 <template>
     <div class="h-full flex flex-col p-6 bg-[#f4f7fe]">
         <!-- 搜索筛选区域 -->
-        <OrderFilter
-            v-model="selectedStatus"
-            @change="handleStatusChange"
-            @reset="handleReset"
-        />
+        <OrderFilter v-model="selectedStatus" @change="handleStatusChange" @reset="handleReset" />
 
         <!-- 表格区域 -->
         <div class="flex-1 overflow-hidden">
@@ -23,7 +19,7 @@
                     </el-tag>
                 </template>
                 <template #totalPrice="{ row }">
-                    <span class="text-rose-500 font-bold">￥{{ row.totalPriceText }}</span>
+                    <span class="text-rose-500 font-bold">{{ formatPrice(row.totalPrice) }}</span>
                 </template>
                 <template #buyerName="{ row }">
                     <span class="text-gray-600">{{ row.buyerName }}</span>
@@ -36,11 +32,11 @@
                 </template>
                 <template #orderStatus="{ row }">
                     <el-tag
-                        :type="getOrderStatusInfo(row.orderType, row.orderStatus).type"
+                        :type="getOrderStatusInfo(row.orderStatus).type"
                         effect="light"
                         class="border-none px-3 rounded-full"
                     >
-                        {{ getOrderStatusInfo(row.orderType, row.orderStatus).label }}
+                        {{ getOrderStatusInfo(row.orderStatus).label }}
                     </el-tag>
                 </template>
                 <template #createTime="{ row }">
@@ -50,27 +46,24 @@
                     <el-button link type="primary" size="small" @click="onDetail(row)">
                         详情
                     </el-button>
-                    <!-- 商家专用操作：发货、取消 -->
-                    <template v-if="userStore.isMerchant">
-                        <el-button
-                            v-if="row.orderStatus === SubOrderStatus.CREATED"
-                            link
-                            type="danger"
-                            size="small"
-                            @click="onCancel(row)"
-                        >
-                            取消
-                        </el-button>
-                        <el-button
-                            v-if="row.orderStatus === SubOrderStatus.PAID"
-                            link
-                            type="warning"
-                            size="small"
-                            @click="onShip(row)"
-                        >
-                            发货
-                        </el-button>
-                    </template>
+                    <el-button
+                        v-if="row.orderStatus === OrderStatus.CREATED"
+                        link
+                        type="danger"
+                        size="small"
+                        @click="onCancel(row)"
+                    >
+                        取消
+                    </el-button>
+                    <el-button
+                        v-if="row.orderStatus === OrderStatus.PAID"
+                        link
+                        type="warning"
+                        size="small"
+                        @click="onShip(row)"
+                    >
+                        发货
+                    </el-button>
                 </template>
             </Table>
         </div>
@@ -98,19 +91,20 @@
 <script setup lang="ts">
     import { ref, onMounted } from 'vue'
     import Table from '@/components/table/Table.vue'
-    import OrderFilter from './model/OrderFilter.vue'
-    import OrderDetailDialog from './model/OrderDetailDialog.vue'
-    import type { OrderItem, OrderPageParams, OrderStatus } from '@/api/common/order'
+    import OrderFilter from './modules/OrderFilter.vue'
+    import OrderDetailDialog from './modules/OrderDetailDialog.vue'
+    import type { OrderItem, OrderPageParams } from '@/api/order'
     import {
         OrderType,
-        SubOrderStatus,
-        getOrderTypeLabel
-    } from '@/api/common/order'
-    import { getApi, getMerchantApi } from '@/api/client'
-    import { useUserStore } from '@/stores/user'
+        OrderStatus,
+        getOrderTypeLabel,
+        getOrderStatusInfo,
+        fetchOrderPage,
+        cancelOrder,
+        shipOrder,
+    } from '@/api/order'
     import { ElMessage, ElMessageBox } from 'element-plus'
-
-    const userStore = useUserStore()
+    import { formatPrice } from '@/utils/money'
 
     const columns = [
         { id: '1', label: '订单号', key: 'orderNo' },
@@ -131,12 +125,6 @@
     const selectedOrder = ref<OrderItem | undefined>()
     const selectedStatus = ref<string>('ALL')
 
-    /**
-     * 获取订单状态信息（基于当前用户角色）
-     */
-    const getOrderStatusInfo = (orderType: OrderType, status: OrderStatus) => {
-        return getApi().getOrderStatusInfo(orderType, status)
-    }
 
     /**
      * 根据订单类型获取标签类型
@@ -157,20 +145,16 @@
     const loadData = async () => {
         const params: OrderPageParams = {
             page: page.value,
-            pageSize: pageSize.value
+            pageSize: pageSize.value,
         }
 
         if (selectedStatus.value !== 'ALL') {
             params.status = selectedStatus.value
         }
 
-        try {
-            const res = await getApi().fetchOrderPage(params)
-            data.value = res.data.records
-            total.value = Number(res.data.total) || 0
-        } catch (error) {
-            console.error('Failed to load orders:', error)
-        }
+        const res = await fetchOrderPage(params)
+        data.value = res.data.records
+        total.value = Number(res.data.total) || 0
     }
 
     const handlePageChange = (val: number) => {
@@ -203,15 +187,11 @@
     const onCancel = (row: OrderItem) => {
         ElMessageBox.confirm('确定要取消该订单吗？', '提示', {
             type: 'warning',
-            confirmButtonClass: 'el-button--danger'
+            confirmButtonClass: 'el-button--danger',
         }).then(async () => {
-            try {
-                await getMerchantApi().cancelOrder(row.orderNo)
-                ElMessage.success('订单已取消')
-                loadData()
-            } catch (error) {
-                console.error('Failed to cancel order:', error)
-            }
+            await cancelOrder(row.orderNo)
+            ElMessage.success('订单已取消')
+            loadData()
         })
     }
 
@@ -219,13 +199,9 @@
         ElMessageBox.confirm('确定要发货吗？', '提示', {
             type: 'info',
         }).then(async () => {
-            try {
-                await getMerchantApi().shipOrder(row.orderNo)
-                ElMessage.success('发货成功')
-                loadData()
-            } catch (error) {
-                console.error('Failed to ship order:', error)
-            }
+            await shipOrder(row.orderNo)
+            ElMessage.success('发货成功')
+            loadData()
         })
     }
 
@@ -235,25 +211,25 @@
 </script>
 
 <style scoped>
-.custom-pagination :deep(.el-pagination__total),
-.custom-pagination :deep(.el-pagination__jump) {
-    color: #64748b;
-    font-weight: 500;
-}
+    .custom-pagination :deep(.el-pagination__total),
+    .custom-pagination :deep(.el-pagination__jump) {
+        color: #64748b;
+        font-weight: 500;
+    }
 
-.custom-pagination :deep(.btn-prev),
-.custom-pagination :deep(.btn-next),
-.custom-pagination :deep(.el-pager li) {
-    background-color: white !important;
-    border: 1px solid #f1f5f9 !important;
-    border-radius: 6px !important;
-    transition: all 0.2s;
-}
+    .custom-pagination :deep(.btn-prev),
+    .custom-pagination :deep(.btn-next),
+    .custom-pagination :deep(.el-pager li) {
+        background-color: white !important;
+        border: 1px solid #f1f5f9 !important;
+        border-radius: 6px !important;
+        transition: all 0.2s;
+    }
 
-.custom-pagination :deep(.el-pager li.is-active) {
-    background-color: #3b82f6 !important;
-    border-color: #3b82f6 !important;
-    color: white !important;
-    box-shadow: 0 2px 8px -2px rgba(59, 130, 246, 0.2);
-}
+    .custom-pagination :deep(.el-pager li.is-active) {
+        background-color: #3b82f6 !important;
+        border-color: #3b82f6 !important;
+        color: white !important;
+        box-shadow: 0 2px 8px -2px rgba(59, 130, 246, 0.2);
+    }
 </style>

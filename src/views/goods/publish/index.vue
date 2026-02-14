@@ -57,7 +57,7 @@
                 <Step2
                     v-else-if="publishStore.activeStep === PublishStep.WRITE_INFO"
                     v-model:formData="publishStore.formData"
-                    :categoryList="categoryStore.categoryTree"
+                    :categoryTree="categoryStore.categoryTree"
                     :unitList="unitStore.unitList"
                     :submitting="publishStore.submitting"
                     @prev="handlePrev"
@@ -78,12 +78,12 @@
     import { PublishStep, useGoodsPublishStore } from '@/stores/goodsPublish'
     import { ElMessage } from 'element-plus'
     import { Check } from '@element-plus/icons-vue'
-    import Step1 from './model/Step1.vue'
-    import Step2 from './model/Step2.vue'
-    import Step3 from './model/Step3.vue'
+    import Step1 from './modules/Step1.vue'
+    import Step2 from './modules/Step2.vue'
+    import Step3 from './modules/Step3.vue'
     import { useCategoryStore } from '@/stores/category'
     import { useUnitStore } from '@/stores/unit'
-    import { addGoods, type GoodsSubmitPayload } from '@/api/merchant'
+    import { submitGoods, republishGoodsFromAudit, toGoodsSubmitRequest } from '@/api/goods'
     import { useUserStore } from '@/stores/user'
     import { onMounted } from 'vue'
 
@@ -94,41 +94,21 @@
 
     const steps = ['选择发布方式', '填写商品信息', '发布完成']
 
-    /**
-     * 第一步：选择类型后进入填写页
-     */
-    const handleSelectType = async (type: 'new' | 'template') => {
+    const handleSelectType = (type: 'new' | 'template') => {
         if (type === 'template') {
             ElMessage.info('模板功能开发中，已为您切换至普通发布')
         }
         publishStore.nextStep()
     }
 
-    /**
-     * 上一步逻辑
-     */
-    const handlePrev = async () => {
-        // 如果处于重新发布模式，清理所有重新发布数据
-        if (publishStore.isRepublish) {
-            publishStore.resetPublishFlow()
-            publishStore.setActiveStep(PublishStep.MODEL_SELECT)
-            ElMessage.info('已取消重新发布')
-            return
-        }
-
-        publishStore.setActiveStep(PublishStep.MODEL_SELECT)
+    const handlePrev = () => {
+        publishStore.resetPublishFlow()
     }
 
-    /**
-     * 重置并开始新的发布
-     */
     const resetForm = () => {
         publishStore.resetPublishFlow()
     }
 
-    /**
-     * 提交表单
-     */
     const submitForm = async () => {
         publishStore.setSubmitting(true)
         try {
@@ -136,13 +116,14 @@
                 throw new Error('商户未关联店铺，无法发布商品')
             }
 
-            if (!publishStore.formData.mainImg) {
-                throw new Error('请上传商品主图')
-            }
-
             publishStore.formData.storeId = userStore.storeId
-            await addGoods(publishStore.formData as GoodsSubmitPayload)
-            ElMessage.success('商品发布成功')
+            const request = toGoodsSubmitRequest(publishStore.formData)
+
+            if (publishStore.isRepublish) {
+                await republishGoodsFromAudit(publishStore.currentAuditId!, request)
+            } else {
+                await submitGoods(request)
+            }
             publishStore.nextStep()
         } finally {
             publishStore.setSubmitting(false)

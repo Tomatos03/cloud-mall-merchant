@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { getCategoryList, type CategoryItem } from '@/api/merchant/category'
-import { getCategoryTree } from '@/api/common/category'
+import { getCategoryList, type CategoryNode } from '@/api/category'
+import { getCategoryTree } from '@/api/category'
 
 export const useCategoryStore = defineStore('category', () => {
     const loading = ref(false)
-    const _categoryList = ref<CategoryItem[]>([])
-    const _categoryTree = ref<CategoryItem[]>([])
+    const _categoryList = ref<CategoryNode[]>([])
+    const _categoryTree = ref<CategoryNode[]>([])
     const _listLoaded = ref(false)
     const _treeLoaded = ref(false)
 
@@ -71,13 +71,13 @@ export const useCategoryStore = defineStore('category', () => {
      * @param categoryId 分类ID（通常是叶子分类）
      * @returns 分类路径数组，例如：[{ name: '电子产品' }, { name: '手机' }, { name: '苹果' }]
      */
-    const getCategoryPath = (categoryId: string): CategoryItem[] => {
-        const categoryMap = new Map<string, CategoryItem>()
+    const getCategoryPath = (categoryId: string): CategoryNode[] => {
+        const categoryMap = new Map<string, CategoryNode>()
         for (const item of categoryList.value) {
             categoryMap.set(item.id, item)
         }
 
-        const path: CategoryItem[] = []
+        const path: CategoryNode[] = []
         let currentId: string | null | undefined = categoryId
 
         while (currentId && currentId !== '0') {
@@ -113,12 +113,12 @@ export const useCategoryStore = defineStore('category', () => {
         if (!categoryIdPath || categoryIdPath.length === 0) {
             return '-'
         }
-        const categoryMap = new Map<string, CategoryItem>()
+        const categoryMap = new Map<string, CategoryNode>()
         for (const item of categoryList.value) {
             categoryMap.set(item.id, item)
         }
 
-        const path: CategoryItem[] = []
+        const path: CategoryNode[] = []
         for (const id of categoryIdPath) {
             const category = categoryMap.get(String(id))
             if (category) {

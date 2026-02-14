@@ -1,17 +1,6 @@
 <template>
     <div class="p-6 bg-[#f4f7fe] min-h-screen overflow-y-auto text-[#2d3748]">
         <div class="max-w-4xl mx-auto">
-            <!-- 页面标题区域 -->
-            <div class="flex items-center gap-3 mb-8">
-                <div class="p-3 rounded-xl bg-blue-50">
-                    <el-icon :size="24" class="text-blue-600"><Shop /></el-icon>
-                </div>
-                <div>
-                    <h1 class="text-xl font-bold text-gray-800">店铺设置</h1>
-                    <p class="text-sm text-gray-500 mt-0.5">管理您的店铺基本信息、头像及横幅展示</p>
-                </div>
-            </div>
-
             <!-- 主体配置卡片 -->
             <div
                 class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 transition-all hover:shadow-md mb-8"
@@ -177,10 +166,9 @@
         ShoppingBag,
     } from '@element-plus/icons-vue'
     import type { FormInstance } from 'element-plus'
-    import { getMerchantApi } from '@/api/client'
-
     import { useUserStore } from '@/stores/user'
-    import type { StoreInfo } from '@/api/merchant/store'
+    import { getMyStoreInfo, updateStore, type StoreInfo } from '@/api/store'
+    import { uploadImage } from '@/api/common'
 
     const userStore = useUserStore()
     const formRef = ref<FormInstance>()
@@ -209,8 +197,7 @@
     const fetchStoreData = async () => {
         loading.value = true
         try {
-            const api = getMerchantApi()
-            const res = await api.getMyStoreInfo()
+            const res = await getMyStoreInfo()
             if (res.data) {
                 const data = res.data
                 formData.id = data.id
@@ -254,8 +241,7 @@
         uploadFormData.append('file', options.file)
 
         try {
-            const api = getMerchantApi()
-            const res = await api.uploadImage(uploadFormData)
+            const res = await uploadImage(uploadFormData)
             if (res.data && res.data.url) {
                 formData[field] = res.data.url
                 ElMessage.success('上传成功')
@@ -276,8 +262,7 @@
             if (valid) {
                 submitting.value = true
                 try {
-                    const api = getMerchantApi()
-                    await api.updateStore(formData.id, {
+                    updateStore(formData.id, {
                         name: formData.name,
                         info: formData.info,
                         avatarUrl: formData.avatarUrl,

@@ -1,14 +1,17 @@
 import { defineStore } from 'pinia'
 import { useCategoryStore } from './category'
-import type { GoodsAuditInfo } from '@/views/goods/audit/model/AuditMerchantView.vue'
 import type {
-    AuditStatus,
     GoodsSkuItem,
     GoodsSpecification,
     GoodsSubmitPayload,
-    Image,
-} from '@/api/common'
+    GoodsListItem,
+    GoodsExtraInfo,
+} from '@/api/goods'
+import { AuditStatus } from '@/api/audit'
+import type { Image } from '@/api/common'
 import { useUnitStore } from './unit'
+import { useUserStore } from './user'
+import { urlsToImages } from '@/utils/image'
 
 /**
  * 商品发布步骤枚举
@@ -24,26 +27,26 @@ export enum PublishStep {
 
 export type PublishStepIndex = PublishStep
 
+/**
+ * 商品发布状态接口
+ *
+ * 注意：formData 中的图片字段使用 Image[] 类型（包含 uid、name、url），
+ * 这是为了满足前端图片上传组件的需求。
+ *
+ * 在提交给后端时，会通过工具函数将 Image[] 转换为 string[]（URL 数组），
+ * 匹配后端 API 期望的 displayImageUrls 和 descriptionUrls 字段。
+ */
 export interface GoodsPublishState {
-    // 发布表单数据
+    // 发布表单数据（内部使用 Image[] 对象，提交时转换为 string[]）
     formData: GoodsSubmitPayload
     // 当前活动步骤
     activeStep: PublishStep
     // 是否正在提交
     submitting: boolean
-    // 是否只读模式
-    currentGoodsId?: string
     // 加载状态
     loading: boolean
     // 当前审核记录ID
     currentAuditId?: string
-    currentAuditStatus?: AuditStatus
-}
-
-const DEFAULT_MAIN_IMAGE: Image = {
-    url: '',
-    uid: -1,
-    name: '',
 }
 
 /**
@@ -52,15 +55,19 @@ const DEFAULT_MAIN_IMAGE: Image = {
  * - 支持刷新时重新加载数据
  * - 提供初始化、重置等操作
  * - 重点：发布成功页（步骤2）不持久化，通过页面初始化检查重置
+ *
+ * 图片数据处理说明：
+ * - 内部存储：使用 Image[] 对象（包含 uid、name、url），满足上传组件需求
+ * - 数据加载：后端返回 string[] 时，通过 urlsToImages() 转换为 Image[]
+ * - 数据提交：通过 imagesToUrls() 将 Image[] 转换为 string[]，匹配后端接口
  */
 export const useGoodsPublishStore = defineStore('goodsPublish', {
     state: (): GoodsPublishState => ({
         formData: {
             goodsName: '',
             status: true,
-            mainImg: DEFAULT_MAIN_IMAGE,
-            imgList: [],
-            descriptionImgList: [],
+            displayImages: [],
+            descriptionImages: [],
             specifications: [],
             skus: [],
             categoryId: '',
@@ -71,21 +78,21 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
         activeStep: PublishStep.MODEL_SELECT,
         submitting: false,
         loading: false,
+        currentAuditId: undefined,
     }),
-
     getters: {
         /**
          * 是否是编辑模式（有商品ID）
          */
         isEdit: (state): boolean => {
-            return !!state.currentGoodsId
+            return !!state.formData.goodsId
         },
 
         isRepublish: (state): boolean => {
             return !!state.currentAuditId
         },
         descriptionImgList: (state): Image[] => {
-            return state.formData.descriptionImgList || []
+            return state.formData.descriptionImages || []
         },
         specifications: (state): GoodsSpecification[] => {
             return state.formData.specifications || []
@@ -94,16 +101,7 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
             return state.formData.skus || []
         },
         displayImages: (state): Image[] => {
-            const images: Image[] = []
-            // 如果mainImg存在且有url，添加为第一张
-            if (state.formData.mainImg?.url) {
-                images.push(state.formData.mainImg)
-            }
-            // 添加其他展示图
-            if (state.formData.imgList && state.formData.imgList.length > 0) {
-                images.push(...state.formData.imgList)
-            }
-            return images
+            return state.formData.displayImages || []
         },
     },
 
@@ -119,7 +117,9 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
                 ...data,
             }
         },
-
+        setCurrentAuditId(auditId: string) {
+            this.currentAuditId = auditId
+        },
         /**
          * 设置表单数据（用于初始化或完全替换）
          */
@@ -133,9 +133,8 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
                     unitId: data.unitId,
                     status: !!data.status,
                     sellPoint: data.sellPoint,
-                    mainImg: data.mainImg,
-                    imgList: data.imgList ?? [],
-                    descriptionImgList: data.descriptionImgList,
+                    displayImages: data.displayImages ?? [],
+                    descriptionImages: data.descriptionImages,
                     storeId: data.storeId,
                     specifications: data.specifications ?? [],
                     skus: data.skus ?? [],
@@ -147,11 +146,44 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
 
         /**
          * 设置审核驳回的商品数据（用于重新发布）
-         * 直接调用 setFormData 方法来完整加载审核数据
          */
-        setFormDataForRepublish(auditData: GoodsAuditInfo) {
-            this.currentAuditId = auditData.auditId
-            this.setFormData(auditData)
+        setFormDataForRepublish(
+            data: {
+                auditId: string
+                auditStatus: AuditStatus
+            } & GoodsSubmitPayload,
+        ) {
+            this.setCurrentAuditId(data.auditId)
+            this.setActiveStep(PublishStep.WRITE_INFO)
+            const { auditId, auditStatus, ...payload } = data
+            this.setFormData(payload)
+        },
+
+        /**
+         * 加载编辑时的商品数据
+         * @param goodsItem 商品列表项数据
+         * @param goodsExtraInfo 从 API 获取的商品规格和 SKU 信息
+         */
+        loadGoodsForEdit(goodsItem: GoodsListItem, goodsExtraInfo: GoodsExtraInfo) {
+            this.loading = true
+            try {
+                // 组合完整的表单数据，将后端返回的 URL 数组转换为 Image 数组
+                this.formData = {
+                    goodsId: goodsItem.goodsId,
+                    goodsName: goodsItem.goodsName,
+                    status: !!goodsItem.status,
+                    sellPoint: goodsItem.sellPoint || '',
+                    unitId: goodsItem.unitId,
+                    categoryId: goodsItem.categoryId,
+                    displayImages: urlsToImages(goodsItem.displayImageUrls),
+                    descriptionImages: urlsToImages(goodsExtraInfo.descriptionImageUrls),
+                    specifications: goodsExtraInfo.specifications ?? [],
+                    skus: goodsExtraInfo.skus ?? [],
+                    storeId: useUserStore().storeId ?? '',
+                }
+            } finally {
+                this.loading = false
+            }
         },
 
         isFormDataEmpty(): boolean {
@@ -161,9 +193,8 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
                 !formData.categoryId &&
                 !formData.unitId &&
                 !formData.sellPoint?.trim() &&
-                !formData.mainImg?.url &&
-                (!formData.imgList || formData.imgList.length === 0) &&
-                (!formData.descriptionImgList || formData.descriptionImgList.length === 0) &&
+                (!formData.displayImages || formData.displayImages.length === 0) &&
+                (!formData.descriptionImages || formData.descriptionImages.length === 0) &&
                 (!formData.specifications || formData.specifications.length === 0) &&
                 (!formData.skus || formData.skus.length === 0)
             )
@@ -173,6 +204,9 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
          */
         setActiveStep(step: PublishStep) {
             this.activeStep = step
+        },
+        setLoading(loading: boolean) {
+            this.loading = loading
         },
         ensureLoadBaseData() {
             this.initBaseData()
@@ -195,6 +229,7 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
                     this.initBaseData()
                     break
                 case PublishStep.SUCCESS:
+                    this.clearFormData()
                     break
             }
             const STEP_NUM = Object.keys(PublishStep).length / 2
@@ -208,11 +243,29 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
             this.submitting = submitting
         },
 
+        clearFormData() {
+            this.formData = {
+                goodsName: '',
+                status: true,
+                displayImages: [],
+                descriptionImages: [],
+                specifications: [],
+                skus: [],
+                categoryId: '',
+                unitId: '',
+                sellPoint: '',
+                storeId: '',
+            }
+            this.activeStep = PublishStep.MODEL_SELECT
+            this.submitting = false
+            this.currentAuditId = undefined
+        },
         /**
          * 重置整个发布流程
          */
         resetPublishFlow() {
-            this.$reset()
+            this.clearFormData()
+            this.setActiveStep(PublishStep.MODEL_SELECT)
         },
 
         /**
