@@ -1,4 +1,5 @@
 import { useUserStore } from '@/stores/user'
+import { useImStore } from '@/stores/im'
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
@@ -13,13 +14,21 @@ const router = createRouter({
             path: '/',
             name: 'Home',
             component: () => import('@/layout/home/index.vue'),
+            redirect: '/dashboard', // 重定向到工作台
             children: [
-                // 统计页面
+                // 工作台
                 {
-                    path: 'statistics',
-                    name: 'Statistics',
-                    component: () => import('@/views/statistics/index.vue'),
-                    meta: { title: '数据统计' },
+                    path: 'dashboard',
+                    name: 'Dashboard',
+                    component: () => import('@/views/dashboard/index.vue'),
+                    meta: { title: '工作台' },
+                },
+                // 在线客服
+                {
+                    path: 'im',
+                    name: 'IM',
+                    component: () => import('@/views/im/index.vue'),
+                    meta: { title: '在线客服', hidden: true },
                 },
                 // 店铺管理
                 {
@@ -82,6 +91,11 @@ router.beforeEach(async (to, _from, next) => {
     if (homePath) return next(homePath)
 
     return next()
+})
+
+router.afterEach((to) => {
+    const imStore = useImStore()
+    imStore.setInIMPage(to.path.includes('/im'))
 })
 
 function needRedirectToHome(path: string) {

@@ -91,7 +91,6 @@
     import { useRoute, useRouter } from 'vue-router'
     import Header from './modules/Header.vue'
     import { computed } from 'vue'
-    import { useUserStore } from '@/stores/user'
     import {
         ShoppingTrolley,
         DataAnalysis,
@@ -109,9 +108,6 @@
 
     const route = useRoute()
     const router = useRouter()
-    const userStore = useUserStore()
-
-    const DEFAULT_AVATAR = 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
 
     /**
      * 从路由定义生成菜单项
@@ -138,6 +134,7 @@
             return children
                 .filter((child) => {
                     // 过滤掉没有 name 的路由（如纯容器路由）
+                    if (child.meta?.hidden) return false
                     return child.name && child.path
                 })
                 .map((child) => {
@@ -189,18 +186,6 @@
         if (!firstMenu) return null
 
         return firstMenu.children?.[0]?.path || firstMenu.path || null
-    })
-
-    // 用户信息计算属性
-    const userDisplayName = computed(() => userStore.displayName || userStore.username || '用户')
-
-    const userAvatarUrl = computed(() => {
-        const avatar = userStore.avatarUrl
-        return avatar && avatar.trim() !== '' ? avatar : DEFAULT_AVATAR
-    })
-
-    const userRoleText = computed(() => {
-        return 'NORMAL USER'
     })
 
     const handleMenuSelect = (path: string) => {

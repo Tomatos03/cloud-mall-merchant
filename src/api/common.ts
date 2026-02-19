@@ -12,6 +12,41 @@ export interface Image {
 }
 
 /**
+ * 通用分页对象
+ */
+export interface PageParams {
+    page: number
+    pageSize: number
+    [key: string]: unknown
+}
+
+/**
+ * 通用分页返回结果
+ */
+export interface PageResult<T> {
+    /**
+     * 数据列表
+     */
+    records: T[]
+    /**
+     * 总记录数
+     */
+    total: number
+    /**
+     * 当前页码
+     */
+    current: number
+    /**
+     * 每页数量
+     */
+    size: number
+    /**
+     * 总页数
+     */
+    pages: number
+}
+
+/**
  * 上传图片（multipart/form-data）
  * @param formData FormData 包含 file 字段
  */

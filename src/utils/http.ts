@@ -16,81 +16,6 @@ export interface ResponseData<T = unknown> {
 }
 
 /**
- * 图片处理逻辑：将相对路径转换为完整的图片URL
- */
-const getImageBaseURL = (): string => {
-    if (import.meta.env.PROD) {
-        return import.meta.env.VITE_IMAGE_BASE_URL || window.location.origin
-    }
-    const apiBaseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:7000'
-    // 如果是相对路径，则补全域名以便 URL 解析
-    const urlStr = apiBaseURL.startsWith('http')
-        ? apiBaseURL
-        : `${window.location.origin}${apiBaseURL}`
-    const url = new URL(urlStr)
-    return `${url.protocol}//${url.host}`
-}
-
-const formatImageUrl = (url: string): string => {
-    if (typeof url !== 'string' || !url) return url
-    // 如果已经是完整URL或 Base64，直接返回
-    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
-        return url
-    }
-    const baseURL = getImageBaseURL()
-    const path = url.startsWith('/') ? url : `/${url}`
-    return `${baseURL}${path}`
-}
-
-/**
- * 将完整URL还原为相对路径，用于提交给后端
- */
-
-const IMAGE_KEYS = ['url', 'img', 'avatarUrl', 'banner', 'goodsImg', 'imageUrl']
-
-/**
- * 递归处理响应对象中的图片字段，将相对路径转为绝对路径
- */
-const processImageUrls = (data: any): any => {
-    if (!data || typeof data !== 'object') return data
-
-    if (Array.isArray(data)) {
-        data.forEach((item) => processImageUrls(item))
-        return data
-    }
-
-    for (const key in data) {
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
-            const value = data[key]
-            if (IMAGE_KEYS.includes(key) && typeof value === 'string' && value) {
-                if (key === 'imgList' || key === 'detailImages') {
-                    // 处理可能出现的逗号分隔图片列表
-                    data[key] = value
-                        .split(',')
-                        .filter(Boolean)
-                        .map((img: string) => formatImageUrl(img.trim()))
-                        .join(',')
-                } else {
-                    data[key] = formatImageUrl(value)
-                }
-            } else if (typeof value === 'object' && value !== null) {
-                processImageUrls(value)
-            }
-        }
-    }
-    return data
-}
-
-// 创建 axios 实例
-const service: AxiosInstance = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || '/api', // API 基础路径
-    timeout: 15000, // 请求超时时间
-    headers: {
-        'Content-Type': 'application/json;charset=UTF-8',
-    },
-})
-
-/**
  * 处理 401 未授权错误
  */
 const handleUnauthorized = () => {
@@ -145,64 +70,59 @@ const handleResponseError = (error: unknown): string => {
     return '请求失败'
 }
 
-// 请求拦截器
-service.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
-        // 在发送请求之前做些什么
-        // 可以在这里添加 token
-        const userStore = useUserStore()
-        const token = userStore.token
-        if (token && config.headers) {
-            config.headers.Authorization = `Bearer ${token}`
-        }
+// 工厂函数：创建带拦截器的 axios 实例
+function createAxiosInstantce(baseURL: string): AxiosInstance {
+    const instance = axios.create({
+        baseURL,
+        timeout: 15000,
+        headers: {
+            'Content-Type': 'application/json;charset=UTF-8',
+        },
+    })
 
-        return config
-    },
-    (error) => {
-        // 对请求错误做些什么
-        console.error('请求错误：', error)
-        return Promise.reject(error)
-    },
-)
+    // 请求拦截器
+    instance.interceptors.request.use(
+        (config: InternalAxiosRequestConfig) => {
+            const userStore = useUserStore()
+            const token = userStore.token
+            if (token && config.headers) {
+                config.headers.Authorization = `Bearer ${token}`
+            }
+            return config
+        },
+        (error) => {
+            console.error('请求错误：', error)
+            return Promise.reject(error)
+        },
+    )
 
-// 响应拦截器
-service.interceptors.response.use(
-    (response: AxiosResponse<ResponseData>) => {
-        const res = response.data
+    // 响应拦截器
+    instance.interceptors.response.use(
+        (response: AxiosResponse<ResponseData>) => {
+            const res = response.data
 
-        // 根据返回的 code 判断请求是否成功
-        if (res.code !== 200 && res.code !== 0) {
-            ElMessage.error(res.message || '请求失败')
-
-            // 特殊状态码处理
-            if (res.code === 401) {
-                handleUnauthorized()
+            if (res.code !== 200 && res.code !== 0) {
+                ElMessage.error(res.message || '请求失败')
+                throw new Error(res.message || '请求失败')
             }
 
-            return Promise.reject(new Error(res.message || '请求失败'))
-        }
+            return response
+        },
+        (error) => {
+            console.error('响应错误：', error)
+            const message = handleResponseError(error)
+            ElMessage.error(message)
+            return Promise.reject(error)
+        },
+    )
 
-        // 自动处理返回数据中的图片相对路径
-        if (res.data) {
-            processImageUrls(res.data)
-        }
-
-        // 直接返回数据部分
-        return response
-    },
-    (error) => {
-        console.error('响应错误：', error)
-
-        // 处理 HTTP 错误
-        const message = handleResponseError(error)
-
-        ElMessage.error(message)
-        return Promise.reject(error)
-    },
-)
+    return instance
+}
 
 // HTTP 工具类
 class Http {
+    constructor(private axiosInstance: AxiosInstance) {}
+
     /**
      * GET 请求
      * @param url 请求地址
@@ -214,7 +134,9 @@ class Http {
         params?: Record<string, unknown>,
         config?: AxiosRequestConfig,
     ): Promise<ResponseData<T>> {
-        return service.get<ResponseData<T>>(url, { params, ...config }).then((res) => res.data)
+        return this.axiosInstance
+            .get<ResponseData<T>>(url, { params, ...config })
+            .then((res) => res.data)
     }
 
     /**
@@ -228,7 +150,7 @@ class Http {
         data?: Record<string, unknown> | unknown,
         config?: AxiosRequestConfig,
     ): Promise<ResponseData<T>> {
-        return service.post<ResponseData<T>>(url, data, config).then((res) => res.data)
+        return this.axiosInstance.post<ResponseData<T>>(url, data, config).then((res) => res.data)
     }
 
     /**
@@ -242,21 +164,7 @@ class Http {
         data?: Record<string, unknown> | unknown,
         config?: AxiosRequestConfig,
     ): Promise<ResponseData<T>> {
-        return service.put<ResponseData<T>>(url, data, config).then((res) => res.data)
-    }
-
-    /**
-     * PATCH 请求
-     * @param url 请求地址
-     * @param data 请求数据
-     * @param config 请求配置
-     */
-    patch<T = unknown>(
-        url: string,
-        data?: Record<string, unknown> | unknown,
-        config?: AxiosRequestConfig,
-    ): Promise<ResponseData<T>> {
-        return service.patch<ResponseData<T>>(url, data, config).then((res) => res.data)
+        return this.axiosInstance.put<ResponseData<T>>(url, data, config).then((res) => res.data)
     }
 
     /**
@@ -270,12 +178,12 @@ class Http {
         params?: Record<string, unknown>,
         config?: AxiosRequestConfig,
     ): Promise<ResponseData<T>> {
-        return service.delete<ResponseData<T>>(url, { params, ...config }).then((res) => res.data)
+        return this.axiosInstance
+            .delete<ResponseData<T>>(url, { params, ...config })
+            .then((res) => res.data)
     }
 }
 
 // 导出 HTTP 实例
-export const http = new Http()
-
-// 默认导出
-export default http
+export const http = new Http((createAxiosInstantce(import.meta.env.VITE_API_BASE_URL)))
+export const imHttp = new Http((createAxiosInstantce(import.meta.env.VITE_IM_API_BASE_URL)))

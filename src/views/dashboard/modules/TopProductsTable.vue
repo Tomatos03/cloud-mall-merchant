@@ -42,7 +42,9 @@
             </el-table-column>
             <el-table-column prop="saleAmount" label="销售额" width="150" align="right" sortable>
                 <template #default="{ row }">
-                    <span class="font-bold text-orange-600">{{ formatPrice(row.saleAmount.toString()) }}</span>
+                    <span class="font-bold text-orange-600">{{
+                        formatPrice(row.saleAmount.toString())
+                    }}</span>
                 </template>
             </el-table-column>
             <el-table-column label="操作" width="100" align="center" fixed="right">
@@ -62,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-    import type { TopProduct } from '@/api/statistics'
+    import type { TopProduct } from '@/api/dashboard'
     import { formatPrice } from '@/utils/money'
 
     interface Props {

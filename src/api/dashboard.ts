@@ -1,5 +1,5 @@
 /**
- * 公共的统计类型定义
+ * 工作台统计数据 API
  */
 import { http } from '@/utils/http'
 
@@ -40,8 +40,6 @@ export interface MallSummary {
     orderTrend: number // 订单同比：(今日订单 - 昨日订单) / 昨日订单 * 100
 }
 
-
-
 /**
  * 商品销量排行项
  */
@@ -51,7 +49,7 @@ export interface TopProduct {
     goodsName: string // 商品名称
     goodsCover: string // 商品封面图
     saleCount: number // 销量（核心排序指标）
-    saleAmount: string // 销售额（辅助展示，不参与主排序）
+    saleAmount: string // 销售额
 }
 
 /**
@@ -60,18 +58,8 @@ export interface TopProduct {
 export interface CategoryRatio {
     categoryId: string // 分类ID
     categoryName: string // 分类名称
-    saleAmount: number // 销售额（分）
-    saleRatio: number // 销售占比（0-1）
-}
-
-/**
- * 收藏统计概览
- */
-export interface CollectSummary {
-    todayFavoriteAdd: number // 今日新增收藏
-    todayFavoriteCancel: number // 今日取消收藏
-    todayFavoriteNetIncrease: number // 今日净增加
-    totalFavoriteCount: number // 累计收藏总数
+    saleAmount: number // 销售额
+    saleRatio: number // 销售占比
 }
 
 /**
@@ -97,6 +85,6 @@ export function getDashboardData() {
  * 获取销售趋势数据
  * @param days 天数，如 7 或 30
  */
- export function getSalesTrend(days: number) {
-     return http.get<Record<string, number>>(`${PREFIX}/revenue-trend`, { params: { days } })
- }
+export function getSalesTrend(days: number) {
+    return http.get<Record<string, number>>(`${PREFIX}/revenue-trend`, { params: { days } })
+}
