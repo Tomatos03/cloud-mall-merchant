@@ -91,13 +91,7 @@
     import { useRoute, useRouter } from 'vue-router'
     import Header from './modules/Header.vue'
     import { computed } from 'vue'
-    import {
-        ShoppingTrolley,
-        DataAnalysis,
-        Shop,
-        Goods,
-        ShoppingCart,
-    } from '@element-plus/icons-vue'
+    import { ShoppingTrolley } from '@element-plus/icons-vue'
 
     interface MenuItem {
         path: string
@@ -117,37 +111,19 @@
         const homeRoute = router.getRoutes().find((r) => r.path === '/')
         if (!homeRoute || !homeRoute.children) return []
 
-        // 图标映射
-        const iconMap: Record<string, any> = {
-            statistics: DataAnalysis,
-            store: Shop,
-            goods: Goods,
-            order: ShoppingCart,
-        }
-
-        /**
-         * 递归构建菜单树
-         * @param children 路由的子路由
-         * @param parentPath 父路由路径
-         */
         const buildMenuItems = (children: any[], parentPath = '/'): MenuItem[] => {
             return children
-                .filter((child) => {
-                    // 过滤掉没有 name 的路由（如纯容器路由）
-                    if (child.meta?.hidden) return false
-                    return child.name && child.path
-                })
+                .filter((child) => !child.meta?.hidden && child.name && child.path)
                 .map((child) => {
                     const childPath =
                         parentPath === '/' ? `/${child.path}` : `${parentPath}/${child.path}`
                     const menuItem: MenuItem = {
                         path: childPath,
                         title: child.meta?.title || child.name || '',
-                        icon: iconMap[child.name?.toLowerCase()] || null,
+                        icon: child.meta?.icon || null,
                     }
 
-                    // 递归处理子路由
-                    if (child.children && child.children.length > 0) {
+                    if (child.children?.length) {
                         menuItem.children = buildMenuItems(child.children, childPath)
                     }
 

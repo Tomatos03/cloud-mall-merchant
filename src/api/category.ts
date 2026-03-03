@@ -2,7 +2,7 @@
  * 公共的分类类型定义
  */
 
-import http from '@/utils/http'
+import { http } from '@/utils/http'
 
 const PREFIX = '/category'
 

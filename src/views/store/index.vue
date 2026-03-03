@@ -262,7 +262,7 @@
             if (valid) {
                 submitting.value = true
                 try {
-                    updateStore(formData.id, {
+                    await updateStore({
                         name: formData.name,
                         info: formData.info,
                         avatarUrl: formData.avatarUrl,

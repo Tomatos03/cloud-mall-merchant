@@ -86,5 +86,7 @@ export function getDashboardData() {
  * @param days 天数，如 7 或 30
  */
 export function getSalesTrend(days: number) {
-    return http.get<Record<string, number>>(`${PREFIX}/revenue-trend`, { params: { days } })
+    return http.get<Record<string, number>>(`${PREFIX}/revenue-trend`, {
+        days,
+    })
 }

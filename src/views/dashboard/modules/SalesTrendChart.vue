@@ -48,6 +48,14 @@
         }))
     })
 
+    const NUM_THRESHOLD = 10000
+    function yAxiosFormatter(value: number) {
+        if (value >= NUM_THRESHOLD) {
+            return (value / 10000).toFixed(2) + '万'
+        }
+        return value.toFixed(2) + '元'
+    }
+
     const trendOption = computed(() => ({
         tooltip: {
             trigger: 'axis',
@@ -67,17 +75,13 @@
         },
         yAxis: {
             type: 'value',
-            name: '营收额（元）',
+            name: '营收额',
             nameTextStyle: { color: '#606266', fontSize: 12 },
             splitLine: { lineStyle: { type: 'dashed', color: '#f5f5f5' } },
             axisLabel: {
-                formatter: (value: number) => {
-                    if (value >= 10000) {
-                        return (value / 10000).toFixed(1) + '万'
-                    }
-                    return value.toFixed(0)
-                },
+                formatter: yAxiosFormatter,
                 color: '#999',
+                margin: 15
             },
         },
         series: [
@@ -85,7 +89,7 @@
                 name: '营收额',
                 type: 'line',
                 smooth: true,
-                data: chartData.value.map((item) => item.revenue),
+                data: chartData.value.map((item) => Number(item.revenue)),
                 itemStyle: { color: '#409eff' },
                 areaStyle: {
                     color: {

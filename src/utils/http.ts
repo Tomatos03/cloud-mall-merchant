@@ -8,27 +8,86 @@ import type {
 } from 'axios'
 import { ElMessage } from 'element-plus'
 
-// 响应数据接口
 export interface ResponseData<T = unknown> {
     code: number
     message: string
     data: T
 }
 
-/**
- * 处理 401 未授权错误
- */
+const BIZ_SUCCESS_CODE = 0
+const SERVER_INTERNAL_ERROR = '服务器内部异常, 请稍后再试'
+const REQUEST_FAILURE = '请求失败'
+const UNKNOW_BIZ_ERROR = '未知的业务异常'
+
+const getImageBaseURL = (): string => {
+    if (import.meta.env.PROD) {
+        return import.meta.env.VITE_IMAGE_BASE_URL || window.location.origin
+    }
+    const baseUrl = import.meta.env.VITE_API_BASE_URL
+    const url = new URL(baseUrl)
+    return `${url.protocol}//${url.host}`
+}
+
+const processImageURL = (relativePath: string | undefined | null): string => {
+    if (!relativePath) return ''
+    if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
+        return relativePath
+    }
+    const baseURL = getImageBaseURL()
+    const path = relativePath.startsWith('/') ? relativePath : `/${relativePath}`
+    return `${baseURL}${path}`
+}
+
+const IMAGE_FIELDS = new Set([
+    'img',
+    'image',
+    'avatar',
+    'avatarUrl',
+    'icon',
+    'banner',
+    'logo',
+    'mainImg',
+    'preview',
+    'url',
+    'goodsImg',
+    'goodsMainImageUrl',
+    'userAvatar',
+    'storeAvatarUrl',
+    'subImg',
+    'images',
+])
+
+const isImageField = (key: string): boolean => IMAGE_FIELDS.has(key)
+const isImageString = (value: unknown): value is string => typeof value === 'string'
+const isImageArray = (value: unknown): value is unknown[] => Array.isArray(value)
+
+const processImageURLsInData = (data: unknown): unknown => {
+    if (Array.isArray(data)) return data.map(processImageURLsInData)
+    if (data == null || typeof data !== 'object') return data
+
+    return Object.fromEntries(
+        Object.entries(data).map(([key, value]) => {
+            if (!isImageField(key)) {
+                return [key, typeof value === 'object' ? processImageURLsInData(value) : value]
+            }
+            if (isImageString(value)) {
+                return [key, processImageURL(value)]
+            }
+            if (isImageArray(value)) {
+                return [key, value.map((item) => processImageURLsInData(item))]
+            }
+            return [key, processImageURLsInData(value)]
+        }),
+    )
+}
+
 const handleUnauthorized = () => {
+    localStorage.removeItem('token')
     const userStore = useUserStore()
     userStore.clearUser()
     window.location.href = '/login'
 }
 
-/**
- * 根据 HTTP 状态码获取错误消息
- * @param status HTTP 状态码
- * @param errorData 错误响应数据
- */
 const getHttpErrorMessage = (status: number, errorData?: ResponseData): string => {
     switch (status) {
         case 400:
@@ -53,24 +112,32 @@ const getHttpErrorMessage = (status: number, errorData?: ResponseData): string =
     }
 }
 
-/**
- * 处理响应错误
- * @param error axios 错误对象
- */
 const handleResponseError = (error: unknown): string => {
-    if (axios.isAxiosError(error)) {
-        if (error.response) {
-            // 服务器返回了错误状态码
-            return getHttpErrorMessage(error.response.status, error.response.data)
-        } else if (error.request) {
-            // 请求已发出但没有收到响应
-            return '网络连接失败，请检查网络'
-        }
+    if (!axios.isAxiosError(error)) return REQUEST_FAILURE
+
+    if (error.response) {
+        return getHttpErrorMessage(error.response.status, error.response.data)
+    } else if (error.request) {
+        return SERVER_INTERNAL_ERROR
     }
-    return '请求失败'
+    return error.message || REQUEST_FAILURE
 }
 
-// 工厂函数：创建带拦截器的 axios 实例
+const assertNoBizError = (response: ResponseData): void => {
+    if (response.code !== BIZ_SUCCESS_CODE) {
+        throw new Error(response.message || UNKNOW_BIZ_ERROR)
+    }
+}
+
+const fillAuthorizationBear = (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
+    const userStore = useUserStore()
+    const token = userStore.token
+    if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+}
+
 function createAxiosInstantce(baseURL: string): AxiosInstance {
     const instance = axios.create({
         baseURL,
@@ -80,36 +147,20 @@ function createAxiosInstantce(baseURL: string): AxiosInstance {
         },
     })
 
-    // 请求拦截器
     instance.interceptors.request.use(
-        (config: InternalAxiosRequestConfig) => {
-            const userStore = useUserStore()
-            const token = userStore.token
-            if (token && config.headers) {
-                config.headers.Authorization = `Bearer ${token}`
-            }
-            return config
-        },
-        (error) => {
-            console.error('请求错误：', error)
-            return Promise.reject(error)
-        },
+        (config: InternalAxiosRequestConfig) => fillAuthorizationBear(config),
+        (error) => Promise.reject(error),
     )
 
-    // 响应拦截器
     instance.interceptors.response.use(
         (response: AxiosResponse<ResponseData>) => {
             const res = response.data
-
-            if (res.code !== 200 && res.code !== 0) {
-                ElMessage.error(res.message || '请求失败')
-                throw new Error(res.message || '请求失败')
-            }
-
+            assertNoBizError(res)
+            // 注意：由于后端使用 MinIO，图片 URL 已是完整路径，不需要处理
+            // res.data = processImageURLsInData(res.data)
             return response
         },
         (error) => {
-            console.error('响应错误：', error)
             const message = handleResponseError(error)
             ElMessage.error(message)
             return Promise.reject(error)
@@ -119,16 +170,9 @@ function createAxiosInstantce(baseURL: string): AxiosInstance {
     return instance
 }
 
-// HTTP 工具类
 class Http {
     constructor(private axiosInstance: AxiosInstance) {}
 
-    /**
-     * GET 请求
-     * @param url 请求地址
-     * @param params 请求参数
-     * @param config 请求配置
-     */
     get<T = unknown>(
         url: string,
         params?: Record<string, unknown>,
@@ -139,12 +183,6 @@ class Http {
             .then((res) => res.data)
     }
 
-    /**
-     * POST 请求
-     * @param url 请求地址
-     * @param data 请求数据
-     * @param config 请求配置
-     */
     post<T = unknown>(
         url: string,
         data?: Record<string, unknown> | unknown,
@@ -153,12 +191,6 @@ class Http {
         return this.axiosInstance.post<ResponseData<T>>(url, data, config).then((res) => res.data)
     }
 
-    /**
-     * PUT 请求
-     * @param url 请求地址
-     * @param data 请求数据
-     * @param config 请求配置
-     */
     put<T = unknown>(
         url: string,
         data?: Record<string, unknown> | unknown,
@@ -167,12 +199,6 @@ class Http {
         return this.axiosInstance.put<ResponseData<T>>(url, data, config).then((res) => res.data)
     }
 
-    /**
-     * DELETE 请求
-     * @param url 请求地址
-     * @param params 请求参数
-     * @param config 请求配置
-     */
     delete<T = unknown>(
         url: string,
         params?: Record<string, unknown>,
@@ -184,6 +210,6 @@ class Http {
     }
 }
 
-// 导出 HTTP 实例
-export const http = new Http((createAxiosInstantce(import.meta.env.VITE_API_BASE_URL)))
-export const imHttp = new Http((createAxiosInstantce(import.meta.env.VITE_IM_API_BASE_URL)))
+export const http = new Http(createAxiosInstantce(import.meta.env.VITE_API_BASE_URL))
+export const comHttp = new Http(createAxiosInstantce(import.meta.env.VITE_COMMON_API_BASE_URL))
+export const imHttp = new Http(createAxiosInstantce(import.meta.env.VITE_IM_API_BASE_URL))

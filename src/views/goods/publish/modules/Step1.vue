@@ -10,7 +10,7 @@
             <!-- 选项 1: 发布新商品 -->
             <div
                 class="flex-1 bg-white rounded-2xl p-8 border-2 border-transparent hover:border-blue-500 hover:shadow-xl transition-all cursor-pointer group shadow-sm"
-                @click="$emit('select', 'new')"
+                @click="$emit('select', PublishType.NEW)"
             >
                 <div
                     class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-blue-500 transition-colors"
@@ -31,7 +31,7 @@
             <!-- 选项 2: 从模板导入 -->
             <div
                 class="flex-1 bg-white rounded-2xl p-8 border-2 border-transparent hover:border-orange-500 hover:shadow-xl transition-all cursor-pointer group shadow-sm"
-                @click="$emit('select', 'template')"
+                @click="$emit('select', PublishType.TEMPLATE)"
             >
                 <div
                     class="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-orange-500 transition-colors"
@@ -54,9 +54,10 @@
 
 <script setup lang="ts">
     import { Plus, DocumentCopy, ArrowRight } from '@element-plus/icons-vue'
+    import { PublishType } from '@/stores/goodsPublish'
 
     defineEmits<{
-        (e: 'select', type: 'new' | 'template'): void
+        (e: 'select', type: PublishType): void
     }>()
 </script>
 

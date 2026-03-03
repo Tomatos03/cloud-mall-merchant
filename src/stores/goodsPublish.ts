@@ -7,8 +7,8 @@ import type {
     GoodsListItem,
     GoodsExtraInfo,
 } from '@/api/goods'
-import { AuditStatus } from '@/api/audit'
-import type { Image } from '@/api/common'
+import { AuditStatus } from '@/views/audit/types'
+import type { FileMeta } from '@/api/common'
 import { useUnitStore } from './unit'
 import { useUserStore } from './user'
 import { urlsToImages } from '@/utils/image'
@@ -23,6 +23,16 @@ export enum PublishStep {
     WRITE_INFO = 1,
     /** 发布成功 */
     SUCCESS = 2,
+}
+
+/**
+ * 商品发布方式枚举
+ */
+export enum PublishType {
+    /** 新建商品 */
+    NEW = 'new',
+    /** 从模板导入 */
+    TEMPLATE = 'template',
 }
 
 export type PublishStepIndex = PublishStep
@@ -91,7 +101,7 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
         isRepublish: (state): boolean => {
             return !!state.currentAuditId
         },
-        descriptionImgList: (state): Image[] => {
+        descriptionImgList: (state): FileMeta[] => {
             return state.formData.descriptionImages || []
         },
         specifications: (state): GoodsSpecification[] => {
@@ -100,17 +110,12 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
         skuList: (state): GoodsSkuItem[] => {
             return state.formData.skus || []
         },
-        displayImages: (state): Image[] => {
+        displayImages: (state): FileMeta[] => {
             return state.formData.displayImages || []
         },
     },
 
     actions: {
-        /**
-         * 统一的表单数据更新方法
-         * 替代之前的多个单独 setter（setSpecifications, setSkuList 等）
-         * @param data 要更新的表单数据（支持部分更新）
-         */
         updateFormData(data: Partial<GoodsSubmitPayload>) {
             this.formData = {
                 ...this.formData,
@@ -155,7 +160,7 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
         ) {
             this.setCurrentAuditId(data.auditId)
             this.setActiveStep(PublishStep.WRITE_INFO)
-            const { auditId, auditStatus, ...payload } = data
+            const { ...payload } = data
             this.setFormData(payload)
         },
 

@@ -10,16 +10,16 @@
             :header-cell-style="{ background: '#f8faff' }"
         >
             <el-table-column label="排名" width="80" align="center">
-                <template #default="{ row }">
+                <template #default="{ $index }">
                     <div
                         :class="[
                             'w-8 h-8 rounded-full flex items-center justify-center mx-auto text-sm font-bold',
-                            row.rank <= 3
+                            $index < 3
                                 ? 'bg-orange-100 text-orange-600'
                                 : 'bg-gray-100 text-gray-500',
                         ]"
                     >
-                        {{ row.rank }}
+                        {{ $index + 1 }}
                     </div>
                 </template>
             </el-table-column>
@@ -47,18 +47,6 @@
                     }}</span>
                 </template>
             </el-table-column>
-            <el-table-column label="操作" width="100" align="center" fixed="right">
-                <template #default="{ row }">
-                    <el-button
-                        link
-                        type="primary"
-                        size="small"
-                        @click="handleViewProductDetail(row.goodsId)"
-                    >
-                        查看详情
-                    </el-button>
-                </template>
-            </el-table-column>
         </el-table>
     </div>
 </template>
@@ -80,11 +68,6 @@
 
     const handleViewFullReport = () => {
         emit('view-report')
-    }
-
-    const handleViewProductDetail = (goodsId: number) => {
-        console.log('查看商品详情:', goodsId)
-        // TODO: 导航到商品详情页面
     }
 </script>
 

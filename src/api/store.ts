@@ -21,7 +21,6 @@ export interface MerchantInfo {
  * 对应后端 StoreItemVO
  */
 export interface StoreInfo {
-    id: string          // 店铺唯一标识 ID
     name: string        // 店铺名称
     info: string        // 店铺简介/描述
     avatarUrl: string   // 店铺头像 URL
@@ -54,12 +53,6 @@ export function getMyStoreInfo() {
     return http.get<StoreInfo>(`${PREFIX}`)
 }
 
-/**
- * 更新店铺信息
- * RESTful: PATCH /stores/:id (部分更新)
- * @param id 店铺ID
- * @param data 更新的数据
- */
-export function updateStore(id: string, data: UpdateStorePayload) {
-    return http.patch<StoreInfo>(`${PREFIX}/${id}`, data)
+export function updateStore(data: UpdateStorePayload) {
+    return http.post<StoreInfo>(`${PREFIX}`, data)
 }

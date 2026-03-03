@@ -274,9 +274,9 @@
     import { useGoodsPublishStore } from '@/stores/goodsPublish'
     import CapsuleToggle from '@/components/CapsuleToggle.vue'
     import SkuSpecification from './SkuSpecification.vue'
-    import { uploadImage, type Image } from '@/api/common'
+    import { uploadImage, type FileMeta } from '@/api/common'
     import type { CategoryNode } from '@/api/category'
-    import { AuditStatus } from '@/api/audit'
+    import { AuditStatus } from '@/views/audit/types'
     import type { Unit } from '@/api/unit'
     import { urlsToImages } from '@/utils/image'
 
@@ -424,7 +424,7 @@
     })
 
     // 图片预览
-    const handlePictureCardPreview = (file: Image) => {
+    const handlePictureCardPreview = (file: FileMeta) => {
         previewImageUrl.value = file.url
         previewVisible.value = true
     }

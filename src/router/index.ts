@@ -1,6 +1,14 @@
 import { useUserStore } from '@/stores/user'
 import { useImStore } from '@/stores/im'
 import { createRouter, createWebHistory } from 'vue-router'
+import {
+    DataAnalysis,
+    Shop,
+    Goods,
+    ShoppingCart,
+    Timer,
+    DocumentCopy,
+} from '@element-plus/icons-vue'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -21,7 +29,7 @@ const router = createRouter({
                     path: 'dashboard',
                     name: 'Dashboard',
                     component: () => import('@/views/dashboard/index.vue'),
-                    meta: { title: '工作台' },
+                    meta: { title: '工作台', icon: DataAnalysis },
                 },
                 // 在线客服
                 {
@@ -35,13 +43,13 @@ const router = createRouter({
                     path: 'store',
                     name: 'Store',
                     component: () => import('@/views/store/index.vue'),
-                    meta: { title: '店铺装饰' },
+                    meta: { title: '店铺装饰', icon: Shop },
                 },
                 // 商品管理
                 {
                     path: 'goods',
                     name: 'Goods',
-                    meta: { title: '商品管理' },
+                    meta: { title: '商品管理', icon: Goods },
                     children: [
                         {
                             path: 'list',
@@ -63,12 +71,52 @@ const router = createRouter({
                         },
                     ],
                 },
+                // 审核列表
+                {
+                    path: 'audit',
+                    name: 'Audit',
+                    component: () => import('@/views/audit/index.vue'),
+                    meta: { title: '审核列表', icon: DocumentCopy },
+                },
                 // 订单管理
                 {
                     path: 'order',
                     name: 'Order',
                     component: () => import('@/views/order/index.vue'),
-                    meta: { title: '订单管理' },
+                    meta: { title: '订单管理', icon: ShoppingCart },
+                },
+                // 秒杀活动
+                {
+                    path: 'seckill',
+                    name: 'Seckill',
+                    meta: { title: '秒杀活动', icon: Timer },
+                    component: () => import('@/views/seckill/activities/index.vue'),
+                    children: [
+                        {
+                            path: 'activities/:id',
+                            name: 'SeckillActivityDetail',
+                            component: () => import('@/views/seckill/activities/detail.vue'),
+                            meta: { title: '活动详情', hidden: true },
+                        },
+                        {
+                            path: 'apply/:activityId',
+                            name: 'SeckillApply',
+                            component: () => import('@/views/seckill/apply/index.vue'),
+                            meta: { title: '申请加入', hidden: true },
+                        },
+                        {
+                            path: 'applies',
+                            name: 'SeckillApplies',
+                            component: () => import('@/views/seckill/applies/index.vue'),
+                            meta: { title: '我的申请', hidden: true },
+                        },
+                        {
+                            path: 'applies/:id',
+                            name: 'SeckillApplyDetail',
+                            component: () => import('@/views/seckill/applies/detail.vue'),
+                            meta: { title: '申请详情', hidden: true },
+                        },
+                    ],
                 },
             ],
         },

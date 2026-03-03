@@ -2,7 +2,7 @@
     <div class="h-full flex flex-col p-6 bg-[#f4f7fe]">
         <!-- 筛选区域 -->
         <GoodsFilter
-            v-model="auditStatus"
+            v-model="publishStatus"
             @change="handleFilterChange"
             @reset="handleFilterReset"
             @add="onAdd"
@@ -60,7 +60,7 @@
                 <template #status="{ row }">
                     <el-switch
                         :model-value="statusOf(row)"
-                        :loading="row.__publishing"
+                        :loading="isPublishing(row)"
                         @change="onTogglePublished(row, $event)"
                         style="--el-switch-on-color: #3b82f6"
                     />
@@ -71,21 +71,6 @@
                         <div class="text-gray-400 text-xs truncate">{{ row.sellPoint }}</div>
                     </el-tooltip>
                     <span v-else class="text-gray-300">-</span>
-                </template>
-
-                <template #auditStatus="{ row }">
-                    <el-tag
-                        v-if="
-                            row.auditStatus !== null &&
-                            row.auditStatus !== undefined &&
-                            AuditStatusMap[row.auditStatus as AuditStatus]
-                        "
-                        :type="AuditStatusMap[row.auditStatus as AuditStatus].type"
-                        effect="dark"
-                    >
-                        {{ AuditStatusMap[row.auditStatus as AuditStatus].label }}
-                    </el-tag>
-                    <el-tag v-else type="info" effect="dark"> - </el-tag>
                 </template>
 
                 <template #action="{ row }">
@@ -118,7 +103,12 @@
         </div>
 
         <!-- 商品详情对话框 -->
-        <GoodsDetailDialog v-if="currentGoods" v-model="detailVisible" :data="currentGoods" />
+        <GoodsDetail
+            v-if="currentGoods"
+            v-model="detailVisible"
+            :data="currentGoods"
+            mode="dialog"
+        />
     </div>
 </template>
 
@@ -127,11 +117,11 @@
     import { useRouter } from 'vue-router'
     import { Picture } from '@element-plus/icons-vue'
     import Table from '@/components/table/Table.vue'
-    import GoodsDetailDialog from './modules/GoodsDetailDialog.vue'
+    import GoodsDetail from '@/components/goods/GoodsDetail.vue'
     import GoodsFilter from './modules/GoodsFilter.vue'
     import { useCategoryStore } from '@/stores/category'
     import { ElMessage, ElMessageBox } from 'element-plus'
-    import type { GoodsDetail, GoodsListItem } from '@/api/goods'
+    import type { GoodsDetail as GoodsDetailType, GoodsListItem } from '@/api/goods'
     import { PublishStep, useGoodsPublishStore } from '@/stores/goodsPublish'
     import {
         getGoodsSpecsAndSkus,
@@ -140,7 +130,6 @@
         deleteGoods,
     } from '@/api/goods'
     import { formatPrice } from '@/utils/money'
-    import { AuditStatusMap, AuditStatus } from '@/api/audit'
 
     const categoryStore = useCategoryStore()
     const router = useRouter()
@@ -151,9 +140,8 @@
         { id: '3', label: '价格', key: 'price', width: 150 },
         { id: '4', label: '单位', key: 'unitName', width: 80 },
         { id: '5', label: '所属分类', key: 'category', width: 150 },
-        { id: '6', label: '审核状态', key: 'auditStatus', width: 120 },
-        { id: '7', label: '是否上架', key: 'status', width: 100 },
-        { id: '8', label: '商品卖点', key: 'sellPoint', minWidth: 180 },
+        { id: '6', label: '是否上架', key: 'status', width: 100 },
+        { id: '7', label: '商品卖点', key: 'sellPoint', minWidth: 180 },
     ]
 
     const data = ref<GoodsListItem[]>([])
@@ -162,9 +150,12 @@
     const total = ref(0)
     const loading = ref(false)
     const detailVisible = ref(false)
-    const currentGoods = ref<GoodsDetail>()
+    const currentGoods = ref<GoodsDetailType>()
     const publishStore = useGoodsPublishStore()
-    const auditStatus = ref<AuditStatus>()
+    const publishStatus = ref<boolean | undefined>()
+
+    // 维护正在发布的商品ID集合（用于显示加载状态）
+    const publishingIds = ref<Set<string>>(new Set())
 
     const loadData = async () => {
         loading.value = true
@@ -172,7 +163,7 @@
             const res = await fetchGoodsPage({
                 page: page.value,
                 pageSize: pageSize.value,
-                auditStatus: auditStatus.value,
+                status: publishStatus.value,
             })
             data.value = res.data.records || []
             total.value = Number(res.data.total) || 0
@@ -198,7 +189,7 @@
     }
 
     const handleFilterReset = () => {
-        auditStatus.value = undefined
+        publishStatus.value = undefined
         page.value = 1
         loadData()
     }
@@ -210,7 +201,7 @@
                 ? categoryStore.getCategoryPathStringByIdPath(row.categoryIdPath)
                 : '-'
 
-        currentGoods.value = row as GoodsDetail
+        currentGoods.value = row as GoodsDetailType
 
         detailVisible.value = true
         const res = await getGoodsSpecsAndSkus(row.goodsId)
@@ -251,16 +242,37 @@
         return !!row.status
     }
 
+    /**
+     * 检查指定商品是否正在发布中
+     * @param row 商品行数据
+     * @returns true 表示正在发布，此时开关应显示加载状态
+     */
+    const isPublishing = (row: GoodsListItem) => {
+        return publishingIds.value.has(row.goodsId)
+    }
+
+    /**
+     * 切换商品上架/下架状态
+     * @param row 商品行数据
+     * @param newStatus true 表示上架，false 表示下架
+     */
     const onTogglePublished = async (row: GoodsListItem, newStatus: boolean) => {
         try {
-            ;(row as any).__publishing = true
+            // 标记该商品正在发布中，el-switch 将显示加载动画
+            publishingIds.value.add(row.goodsId)
+
+            // 调用 API 更新商品状态
             await updateGoodsStatus(row.goodsId, newStatus)
+
+            // 更新本地数据
             row.status = newStatus
             ElMessage.success(newStatus ? '已上架' : '已下架')
         } catch {
+            // 如果请求失败，回滚状态
             row.status = !newStatus
         } finally {
-            ;(row as any).__publishing = false
+            // 移除正在发布的标记，el-switch 恢复正常状态
+            publishingIds.value.delete(row.goodsId)
         }
     }
 

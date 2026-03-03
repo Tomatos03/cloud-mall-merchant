@@ -9,6 +9,38 @@ export const useCategoryStore = defineStore('category', () => {
     const _categoryTree = ref<CategoryNode[]>([])
     const _listLoaded = ref(false)
     const _treeLoaded = ref(false)
+    const _categoryMap = ref<Map<string, CategoryNode>>(new Map())
+    const _mapInitialized = ref(false)
+
+    /**
+     * 初始化分类Map（从已加载的列表构建）- 仅初始化一次
+     */
+    const initCategoryMap = () => {
+        if (_mapInitialized.value) {
+            return true
+        }
+
+        if (!_listLoaded.value) {
+            console.warn('❌ 分类列表未加载，请先调用 loadCategoryList()')
+            return false
+        }
+
+        // 构建map
+        _categoryMap.value.clear()
+        for (const item of _categoryList.value) {
+            const id = String(item.id)
+            _categoryMap.value.set(id, item)
+        }
+
+        _mapInitialized.value = true
+
+        console.log('✅ 分类Map已初始化:', {
+            mapSize: _categoryMap.value.size,
+            ids: Array.from(_categoryMap.value.keys()),
+        })
+
+        return true
+    }
 
     /**
      * 获取分类列表（扁平化），支持缓存
@@ -21,7 +53,21 @@ export const useCategoryStore = defineStore('category', () => {
             const res = await getCategoryList()
             _categoryList.value = res.data
             _listLoaded.value = true
+
+            // 加载后立即初始化map
+            initCategoryMap()
+
+            // 调试：输出已加载的分类信息
+            console.log('✅ 分类列表已加载:', {
+                count: _categoryList.value.length,
+                ids: _categoryList.value.map((item) => item.id),
+                data: _categoryList.value,
+            })
+
             return _categoryList.value
+        } catch (error) {
+            console.error('❌ 分类列表加载失败:', error)
+            throw error
         } finally {
             loading.value = false
         }
@@ -62,7 +108,10 @@ export const useCategoryStore = defineStore('category', () => {
      * 根据分类ID获取分类名称
      */
     const getCategoryName = (categoryId: string): string => {
-        const category = categoryList.value.find((item) => item.id === categoryId)
+        if (!_mapInitialized.value) {
+            return '-'
+        }
+        const category = _categoryMap.value.get(String(categoryId))
         return category?.name || '-'
     }
 
@@ -72,18 +121,22 @@ export const useCategoryStore = defineStore('category', () => {
      * @returns 分类路径数组，例如：[{ name: '电子产品' }, { name: '手机' }, { name: '苹果' }]
      */
     const getCategoryPath = (categoryId: string): CategoryNode[] => {
-        const categoryMap = new Map<string, CategoryNode>()
-        for (const item of categoryList.value) {
-            categoryMap.set(item.id, item)
+        // 确保map已初始化
+        if (!_mapInitialized.value) {
+            return []
         }
 
         const path: CategoryNode[] = []
-        let currentId: string | null | undefined = categoryId
+        let currentId: string | null | undefined = String(categoryId)
+
+        console.log(`🔍 获取分类路径，输入ID: ${categoryId}`)
 
         while (currentId && currentId !== '0') {
-            const category = categoryMap.get(currentId)
+            const category = _categoryMap.value.get(currentId)
             if (!category) {
-                console.warn(`分类ID ${currentId} 未找到`)
+                console.warn(
+                    `❌ 分类ID ${currentId} 未找到。已加载分类ID: ${Array.from(_categoryMap.value.keys()).join(', ')}`,
+                )
                 break
             }
 
@@ -113,16 +166,21 @@ export const useCategoryStore = defineStore('category', () => {
         if (!categoryIdPath || categoryIdPath.length === 0) {
             return '-'
         }
-        const categoryMap = new Map<string, CategoryNode>()
-        for (const item of categoryList.value) {
-            categoryMap.set(item.id, item)
+
+        // 确保map已初始化
+        if (!_mapInitialized.value) {
+            return '-'
         }
 
         const path: CategoryNode[] = []
         for (const id of categoryIdPath) {
-            const category = categoryMap.get(String(id))
+            const category = _categoryMap.value.get(String(id))
             if (category) {
                 path.push(category)
+            } else {
+                console.warn(
+                    `❌ 分类ID ${id} 未找到。已加载分类ID: ${Array.from(_categoryMap.value.keys()).join(', ')}`,
+                )
             }
         }
 
@@ -141,6 +199,16 @@ export const useCategoryStore = defineStore('category', () => {
         return getCategoryName(String(categoryIdPath[0]))
     }
 
+    /**
+     * 获取已加载的所有分类ID（调试用）
+     */
+    const getLoadedCategoryIds = (): string[] => {
+        if (!_mapInitialized.value) {
+            return []
+        }
+        return Array.from(_categoryMap.value.keys())
+    }
+
     return {
         categoryList,
         categoryTree,
@@ -152,5 +220,6 @@ export const useCategoryStore = defineStore('category', () => {
         getCategoryPathString,
         getCategoryPathStringByIdPath,
         getFirstLevelCategoryName,
+        getLoadedCategoryIds,
     }
 })

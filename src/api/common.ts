@@ -1,11 +1,11 @@
 import { http } from '@/utils/http'
 
-const PREFIX = '/file/upload'
+const PREFIX = '/files/upload'
 
 /**
  * 本地图片项类型
  */
-export interface Image {
+export interface FileMeta {
     uid?: number
     name?: string
     url: string
@@ -51,7 +51,7 @@ export interface PageResult<T> {
  * @param formData FormData 包含 file 字段
  */
 export function uploadImage(formData: FormData) {
-    return http.post<Image>(`${PREFIX}/image`, formData, {
+    return http.post<FileMeta>(`${PREFIX}`, formData, {
         headers: {
             'Content-Type': 'image/*',
         },

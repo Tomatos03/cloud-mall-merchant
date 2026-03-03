@@ -1,4 +1,4 @@
-import type { Image } from '@/api/common'
+import type { FileMeta } from '@/api/common'
 
 /**
  * 生成唯一ID，优先使用crypto.randomUUID()，降级到时间戳+随机数
@@ -20,11 +20,11 @@ function generateUniqueId(): number {
  * @param urls URL字符串数组
  * @returns Image对象数组
  */
-export function urlsToImages(urls?: string[]): Image[] {
+export function urlsToImages(urls?: string[]): FileMeta[] {
     if (!urls || urls.length === 0) {
         return []
     }
-    
+
     return urls.map((url) => ({
         uid: generateUniqueId(),
         name: url.split('/').pop() || 'image',
@@ -37,11 +37,11 @@ export function urlsToImages(urls?: string[]): Image[] {
  * @param images Image对象数组
  * @returns URL字符串数组
  */
-export function imagesToUrls(images?: Image[]): string[] {
+export function imagesToUrls(images?: FileMeta[]): string[] {
     if (!images || images.length === 0) {
         return []
     }
-    
+
     return images.map((image) => image.url)
 }
 
@@ -54,12 +54,12 @@ export function parseUrlString(urlData?: string | string[]): string[] {
     if (!urlData) {
         return []
     }
-    
+
     // 如果已经是数组，直接返回过滤后的结果
     if (Array.isArray(urlData)) {
         return urlData.filter((url) => url && url.trim())
     }
-    
+
     // 如果是字符串，按逗号分割并过滤空字符串
     return urlData
         .split(',')
