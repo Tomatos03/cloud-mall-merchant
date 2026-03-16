@@ -88,35 +88,15 @@ const router = createRouter({
                 // 秒杀活动
                 {
                     path: 'seckill',
-                    name: 'Seckill',
-                    meta: { title: '秒杀活动', icon: Timer },
+                    name: 'SeckillActivities',
                     component: () => import('@/views/seckill/activities/index.vue'),
-                    children: [
-                        {
-                            path: 'activities/:id',
-                            name: 'SeckillActivityDetail',
-                            component: () => import('@/views/seckill/activities/detail.vue'),
-                            meta: { title: '活动详情', hidden: true },
-                        },
-                        {
-                            path: 'apply/:activityId',
-                            name: 'SeckillApply',
-                            component: () => import('@/views/seckill/apply/index.vue'),
-                            meta: { title: '申请加入', hidden: true },
-                        },
-                        {
-                            path: 'applies',
-                            name: 'SeckillApplies',
-                            component: () => import('@/views/seckill/applies/index.vue'),
-                            meta: { title: '我的申请', hidden: true },
-                        },
-                        {
-                            path: 'applies/:id',
-                            name: 'SeckillApplyDetail',
-                            component: () => import('@/views/seckill/applies/detail.vue'),
-                            meta: { title: '申请详情', hidden: true },
-                        },
-                    ],
+                    meta: { title: '秒杀活动', icon: Timer },
+                },
+                {
+                    path: 'seckill/activities/:id',
+                    name: 'SeckillActivityDetail',
+                    component: () => import('@/views/seckill/activities/detail.vue'),
+                    meta: { title: '秒杀活动详细', hidden: true },
                 },
             ],
         },

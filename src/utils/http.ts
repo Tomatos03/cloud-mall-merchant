@@ -125,6 +125,7 @@ const handleResponseError = (error: unknown): string => {
 
 const assertNoBizError = (response: ResponseData): void => {
     if (response.code !== BIZ_SUCCESS_CODE) {
+        ElMessage.error(response.message || UNKNOW_BIZ_ERROR)
         throw new Error(response.message || UNKNOW_BIZ_ERROR)
     }
 }

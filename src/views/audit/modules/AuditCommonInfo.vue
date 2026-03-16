@@ -60,22 +60,6 @@
                 </span>
             </div>
 
-            <!-- 驳回理由 -->
-            <div v-if="data.status === AuditStatus.REJECTED" class="w-full">
-                <div class="pt-4 border-t border-gray-50">
-                    <span
-                        class="text-xs text-gray-500 block mb-2 tracking-wider uppercase font-medium"
-                    >
-                        审核驳回意见
-                    </span>
-                    <div
-                        class="bg-red-50/50 border border-red-100 rounded p-3 text-sm text-red-600 leading-relaxed"
-                    >
-                        {{ data.reason || '描述信息不符合平台规范' }}
-                    </div>
-                </div>
-            </div>
-
             <!-- 撤销提示 -->
             <div v-if="data.status === AuditStatus.REVOKED" class="w-full">
                 <div class="pt-4 border-t border-gray-50">
@@ -92,10 +76,10 @@
 
 <script setup lang="ts">
     import { AuditStatus, AuditStatusMap } from '../types'
-    import type { AuditCommonData } from '../types'
+    import type { AuditInfo } from '../types'
 
     interface Props {
-        data: AuditCommonData
+        data: AuditInfo
     }
 
     defineProps<Props>()

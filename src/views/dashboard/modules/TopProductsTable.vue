@@ -27,7 +27,7 @@
                 <template #default="{ row }">
                     <div class="flex items-center gap-3">
                         <el-image
-                            :src="row.goodsCover"
+                            :src="row.mainImageUrl"
                             class="w-12 h-12 rounded-lg shrink-0"
                             fit="cover"
                         />

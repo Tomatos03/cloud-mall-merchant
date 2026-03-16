@@ -5,10 +5,10 @@
 
         <!-- 表格区域 -->
         <div class="flex-1 overflow-hidden">
-            <Table :columns="columns" :data="data" height="100%" :showId="false">
+            <Table :columns="columns" :data="data" height="100%" :showId="false" :loading="loading">
                 <!-- 审核申请ID -->
-                <template #auditId="{ row }">
-                    <span class="text-gray-600 text-sm font-mono">{{ row.auditId || '-' }}</span>
+                <template #auditNo="{ row }">
+                    <span class="text-gray-600 text-sm font-mono">{{ row.auditNo || '-' }}</span>
                 </template>
 
                 <!-- 申请人 -->
@@ -17,14 +17,14 @@
                 </template>
 
                 <!-- 业务类型 -->
-                <template #targetType="{ row }">
+                <template #bizType="{ row }">
                     <el-tag
-                        :type="getTargetTypeInfo(row.targetType).type"
+                        :type="getBizTypeInfo(row.bizType).type"
                         size="small"
                         effect="light"
                         class="px-3 rounded-full border-none"
                     >
-                        {{ getTargetTypeInfo(row.targetType).label }}
+                        {{ getBizTypeInfo(row.bizType).label }}
                     </el-tag>
                 </template>
 
@@ -46,17 +46,23 @@
                 </template>
 
                 <!-- 操作 -->
-                <template #action="{ index }">
-                    <el-button link type="primary" size="small" @click="onView(index)">
+                <template #action="{ row }">
+                    <el-button
+                        link
+                        type="primary"
+                        size="small"
+                        :loading="detailLoading && viewingAuditNo === row.auditNo"
+                        @click="onView(row)"
+                    >
                         查看详情
                     </el-button>
-                    <el-divider v-if="canWithdraw(data[index].status)" direction="vertical" />
+                    <el-divider v-if="canWithdraw(row.status)" direction="vertical" />
                     <el-button
-                        v-if="canWithdraw(data[index].status)"
+                        v-if="canWithdraw(row.status)"
                         link
                         type="danger"
                         size="small"
-                        @click="onWithdraw(index)"
+                        @click="onWithdraw(row)"
                     >
                         撤销申请
                     </el-button>
@@ -81,9 +87,10 @@
 
         <!-- 审核详情对话框 -->
         <AuditDetailDialog
-            v-if="currentAuditData"
+            v-if="currentAuditInfo"
             v-model="detailVisible"
-            :data="currentAuditData"
+            :audit-info="currentAuditInfo"
+            :audit-data="currentAuditData"
         />
     </div>
 </template>
@@ -96,83 +103,98 @@
     import {
         AuditStatus,
         AuditStatusMap,
-        AuditTargetTypeMap,
-        AuditTargetType,
-        type AuditLogVO,
-        type AuditListRow,
+        AuditBizTypeMap,
+        AuditBizType,
+        type AuditRow,
+        type AuditData,
     } from './types'
     import { useCategoryStore } from '@/stores/category'
-    import type { AuditCommonData } from './types'
-    import { fetchAuditPage, withdrawAudit } from '@/api/audit'
+    import type { AuditDetail, AuditInfo } from './types'
+    import { getAuditDetail, pagetAudit, withdrawAudit } from '@/api/audit'
     import { ElMessage, ElMessageBox } from 'element-plus'
+    import { getAuditRenderer } from './renderers'
 
     // 初始化 store
     const categoryStore = useCategoryStore()
 
     // 通用表格列
     const columns = [
-        { id: '1', label: '审核ID', key: 'auditId', minWidth: 90 },
+        { id: '1', label: '审核编号', key: 'auditNo', minWidth: 120 },
         { id: '2', label: '申请人', key: 'applicantName', minWidth: 110 },
-        { id: '3', label: '业务类型', key: 'targetType', minWidth: 90 },
+        { id: '3', label: '业务类型', key: 'bizType', minWidth: 90 },
         { id: '4', label: '提交时间', key: 'createTime', minWidth: 150 },
         { id: '5', label: '审核状态', key: 'status', minWidth: 110 },
     ]
 
-    const data = ref<AuditListRow[]>([])
-    const detailDataList = ref<AuditCommonData[]>([])
+    const data = ref<AuditInfo[]>([])
     const page = ref(1)
     const pageSize = ref(10)
     const total = ref(0)
     const loading = ref(false)
+    const detailLoading = ref(false)
+    const viewingAuditNo = ref('')
 
     const detailVisible = ref(false)
-    const currentAuditData = ref<AuditCommonData>()
+    const currentAuditInfo = ref<AuditInfo | null>(null)
+    const currentAuditData = ref<AuditData[]>([])
 
     // 当前筛选参数
     const currentFilterParams = ref<FilterParams>({})
 
+    const toAuditInfo = (item: AuditRow): AuditInfo => {
+        return {
+            auditNo: item.auditNo,
+            bizType: item.bizType,
+            status: item.status,
+            applicantId: item.applicantId,
+            applicantName: item.applicantName,
+            auditorId: item.auditorId,
+            auditorName: item.auditorName,
+            createTime: item.createTime,
+            auditTime: item.auditTime,
+        }
+    }
+
+    /**
+     * 将审核子项转换为审核数据
+     * @param auditItems 审核子项数组
+     * @param bizType 业务类型
+     * @returns 转换后的审核数据数组
+     */
+    const convertAuditItemsToData = (
+        auditItems: AuditDetail,
+        bizType: AuditBizType,
+    ): AuditData[] => {
+        console.debug('Using renderer for bizType:', bizType)
+        const renderer = getAuditRenderer(bizType)
+        if (!renderer) {
+            return []
+        }
+
+        return auditItems.map((item) => ({
+            status: item.status,
+            reason: item.reason,
+            data: renderer.parseSnapshot(item.snapshot) ?? null,
+        }))
+    }
+
     const loadData = async () => {
         loading.value = true
+        try {
+            const res = await pagetAudit({
+                page: page.value,
+                pageSize: pageSize.value,
+                ...currentFilterParams.value,
+            })
 
-        const res = await fetchAuditPage({
-            page: page.value,
-            pageSize: pageSize.value,
-            ...currentFilterParams.value,
-        })
+            const allRecords = res.data.records ?? []
+            const records = allRecords.map(toAuditInfo)
+            data.value = records
 
-        const allRecords = (res.data.records || []) as AuditLogVO[]
-
-        // 将审核日志转换为通用审核数据
-        const records = allRecords.map((item: AuditLogVO): AuditCommonData => {
-            return {
-                auditId: item.auditId,
-                targetType: item.targetType,
-                targetId: item.targetId,
-                status: item.status,
-                statusName: item.statusName,
-                reason: item.reason,
-                applicantId: item.applicantId,
-                applicantName: item.applicantName,
-                auditorId: item.auditorId,
-                auditorName: item.auditorName,
-                snapshot: item.snapshot,
-                createTime: item.createTime,
-                auditTime: item.auditTime,
-            }
-        })
-
-        detailDataList.value = records
-        data.value = records.map(
-            (item): AuditListRow => ({
-                auditId: item.auditId,
-                applicantName: item.applicantName,
-                targetType: item.targetType,
-                createTime: item.createTime,
-                status: item.status,
-            }),
-        )
-        total.value = res.data.total
-        loading.value = false
+            total.value = res.data.total
+        } finally {
+            loading.value = false
+        }
     }
 
     const handlePageChange = (val: number) => {
@@ -198,32 +220,34 @@
         loadData()
     }
 
-    const onView = (index: number) => {
-        const detail = detailDataList.value?.[index]
-        if (!detail) return
-
-        currentAuditData.value = detail
+    const onView = async (row: AuditInfo) => {
+        detailLoading.value = true
+        viewingAuditNo.value = row.auditNo
+        currentAuditInfo.value = row
         detailVisible.value = true
+        currentAuditData.value = []
+        try {
+            const res = await getAuditDetail(row.auditNo)
+            const auditDetail = res.data ?? []
+            currentAuditData.value = convertAuditItemsToData(auditDetail, row.bizType)
+        } finally {
+            detailLoading.value = false
+            viewingAuditNo.value = ''
+        }
     }
 
     const getAuditStatusInfo = (status: AuditStatus) => {
         return AuditStatusMap[status] || { label: '未知', type: 'info' as const }
     }
 
-    const getTargetTypeInfo = (targetType: AuditTargetType) => {
-        return AuditTargetTypeMap[targetType] || { label: '未知', type: 'info' as const }
+    const getBizTypeInfo = (bizType: AuditBizType) => {
+        return AuditBizTypeMap[bizType] || { label: '未知', type: 'info' as const }
     }
 
-    const canWithdraw = (status: AuditStatus): boolean => {
-        if (!status) {
-          throw new Error('审核状态不能为空');
-        }
-        return status === AuditStatus.PENDING
-    }
+    const canWithdraw = (status: AuditStatus): boolean => status === AuditStatus.PENDING
 
-    const onWithdraw = async (index: number) => {
-        const detail = data.value?.[index]
-        if (!detail) return
+    const onWithdraw = async (row: AuditInfo) => {
+        if (!row?.auditNo) return
 
         await ElMessageBox.confirm('确认要撤销该申请吗？', '提示', {
             confirmButtonText: '确认',
@@ -231,7 +255,7 @@
             type: 'warning',
         })
 
-        await withdrawAudit(detail.auditId)
+        await withdrawAudit(row.auditNo)
         ElMessage.success('撤销申请成功')
         await loadData()
     }

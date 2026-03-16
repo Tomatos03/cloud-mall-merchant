@@ -1,5 +1,5 @@
 import { http } from '@/utils/http'
-import type { AuditPageParams, AuditPageResult, AuditLogVO } from '@/views/audit/types'
+import type { AuditDetail, AuditPageParams, AuditPageResult } from '@/views/audit/types'
 
 const PREFIX = '/audit'
 
@@ -9,26 +9,26 @@ const PREFIX = '/audit'
  * @param params 查询参数
  * @returns 审核记录分页结果
  */
-export function fetchAuditPage(params: AuditPageParams) {
-    return http.post<AuditPageResult>(`${PREFIX}/page`, params)
+export function pagetAudit(params: AuditPageParams) {
+  return http.get<AuditPageResult>(`${PREFIX}/page`, { ...params })
 }
 
 /**
- * 获取审核详情
- * GET /merchant/audit/{auditId}
- * @param auditId 审核记录ID
- * @returns 审核记录详情
+ * 获取审核详情快照
+ * GET /merchant/audit/{auditNo}/detail
+ * @param auditNo 审核编号
+ * @returns 审核对象 JSON 字符串数组
  */
-export function getAuditDetail(auditId: string) {
-    return http.get<AuditLogVO>(`${PREFIX}/${auditId}`)
+export function getAuditDetail(auditNo: string) {
+    return http.get<AuditDetail>(`${PREFIX}/${auditNo}/detail`)
 }
 
 /**
  * 撤销审核申请
- * DELETE /merchant/audit/{auditId}
- * @param auditId 审核记录ID
+ * DELETE /merchant/audit/{auditNo}
+ * @param auditNo 审核编号
  * @returns 是否撤销成功
  */
-export function withdrawAudit(auditId: string) {
-    return http.delete(`${PREFIX}/${auditId}`)
+export function withdrawAudit(auditNo: string) {
+    return http.delete(`${PREFIX}/${auditNo}`)
 }

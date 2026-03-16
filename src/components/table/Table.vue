@@ -20,6 +20,7 @@
                 type="selection"
                 width="50"
                 align="center"
+                header-align="center"
             />
 
             <!-- 序号列 -->
@@ -29,6 +30,7 @@
                 label="序号"
                 width="60"
                 align="center"
+                header-align="center"
             >
                 <template #default="scope">
                     <span class="text-[#718096] text-xs font-bold">
@@ -45,9 +47,10 @@
                 :label="col.label"
                 :fixed="col.isFixed"
                 :width="col.width"
-                :align="col.align || 'left'"
+                :min-width="col.minWidth || 120"
+                :align="col.align || 'center'"
+                :header-align="col.align || 'center'"
                 show-overflow-tooltip
-                min-width="120"
             >
                 <template v-if="$slots && $slots[col.key]" #default="scope">
                     <slot :name="col.key" v-bind="scope" />
@@ -61,6 +64,7 @@
                 fixed="right"
                 width="280"
                 align="center"
+                header-align="center"
                 min-width="280"
             >
                 <template #default="scope">
@@ -96,6 +100,7 @@
         key: string
         isFixed?: boolean
         width?: string | number
+        minWidth?: string | number
         align?: 'left' | 'center' | 'right'
     }
 
@@ -148,23 +153,56 @@
         --el-table-text-color: #4a5568;
         --el-table-header-text-color: #1a202c;
         border: none;
-        height: 100%; /* 确保表格撑满容器 */
+        height: 100%;
     }
 
+    /* Header单元格统一样式 - 水平垂直居中 */
     :deep(.custom-header-cell) {
         background-color: #f8faff !important;
         font-weight: bold;
-        padding: 16px 0;
         border-bottom: 1px solid #f1f5f9;
         font-size: 13px;
         text-transform: uppercase;
         letter-spacing: 0.05em;
+        padding: 0 !important;
     }
 
+    :deep(.custom-header-cell > .cell) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        padding: 16px 0;
+        text-align: center;
+    }
+
+    /* 内容单元格统一样式 - 水平垂直居中 */
     :deep(.custom-cell) {
-        padding: 12px 0;
         border-bottom: 1px solid #f8fafc;
         font-size: 14px;
+        padding: 0 !important;
+    }
+
+    :deep(.custom-cell > .cell) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        padding: 12px 0;
+        text-align: center;
+    }
+
+    /* 确保所有单元格内容都居中 */
+    :deep(.el-table__cell) {
+        padding: 0;
+    }
+
+    /* 多选框和序号也应用相同的对齐 */
+    :deep(.el-table-column--selection .el-table__cell),
+    :deep(.el-table-column--index .el-table__cell) {
+        padding: 0;
     }
 
     /* 隐藏表格多余边框 */

@@ -6,7 +6,7 @@
         </div>
         <div class="space-y-4">
             <div
-                v-for="chatSession in chatSessions"
+                v-for="chatSession in props.data"
                 :key="chatSession.id"
                 class="flex items-start p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-all border border-transparent hover:border-gray-100"
                 @click="handleClick(chatSession.id)"
@@ -37,6 +37,8 @@
 </template>
 
 <script setup lang="ts">
+    import { AuditRendererProps } from '@/views/audit/types'
+
     interface ChatSession {
         id: number
         name: string
@@ -46,9 +48,7 @@
         lastMessageContent: string
     }
 
-    defineProps<{
-        chatSessions: ChatSession[]
-    }>()
+    const props = defineProps<AuditRendererProps<ChatSession[]>>()
 
     const emit = defineEmits<{
         (e: 'message-click', sessionId: number): void

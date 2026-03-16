@@ -82,10 +82,10 @@
                 <div class="flex justify-between items-center mb-6">
                     <div class="text-sm font-bold text-gray-600">SKU 组合列表</div>
                     <div v-if="!isReadonly && internalSkuList.length > 0" class="flex gap-3">
-                        <el-button size="small" @click="batchSet('price')" icon="Edit">
+                        <el-button size="small" @click="batchSetPrice" icon="Edit">
                             批量设置价格
                         </el-button>
-                        <el-button size="small" @click="batchSet('inventory')" icon="Box">
+                        <el-button size="small" @click="batchSetInventory" icon="Box">
                             批量设置库存
                         </el-button>
                     </div>
@@ -113,16 +113,15 @@
 
                     <!-- 价格列 -->
                     <template #price="{ row }: { row: GoodsSkuItem }">
-                        <el-input-number
-                            :model-value="parseFloat(row.price)"
-                            :min="0"
+                        <el-input
+                            :model-value="row.price"
                             size="small"
                             class="w-full!"
-                            controls-position="right"
+                            inputmode="decimal"
+                            placeholder="0.00"
                             :disabled="isReadonly"
-                            @update:model-value="
-                                (val: unknown) => (row.price = val?.toString() || '0')
-                            "
+                            @update:model-value="(val: string) => handlePriceInput(row, val)"
+                            @blur="handlePriceBlur(row)"
                         />
                     </template>
 
@@ -172,6 +171,7 @@
 
     const inputRefs = ref<(InputInstance | null)[]>([])
     const specInputStates = reactive<Array<{ visible: boolean; value: string }>>([])
+    const PRICE_PATTERN = /^\d+(\.\d{1,2})?$/
 
     const internalSpecifications = computed({
         get: () => props.specifications,
@@ -260,6 +260,47 @@
         }
     }
 
+    const sanitizePriceInput = (value: string) => {
+        const sanitized = value.replace(/[^\d.]/g, '')
+        const firstDotIndex = sanitized.indexOf('.')
+        if (firstDotIndex === -1) {
+            return sanitized
+        }
+
+        const integerPart = sanitized.slice(0, firstDotIndex)
+        const decimalPart = sanitized.slice(firstDotIndex + 1).replace(/\./g, '').slice(0, 2)
+        return `${integerPart}.${decimalPart}`
+    }
+
+    const normalizePriceValue = (value: string) => {
+        let normalized = value.trim()
+        if (normalized.startsWith('.')) {
+            normalized = `0${normalized}`
+        }
+        if (normalized.endsWith('.')) {
+            normalized = normalized.slice(0, -1)
+        }
+        return normalized.replace(/^0+(?=\d)/, '')
+    }
+
+    const handlePriceInput = (row: GoodsSkuItem, value: string) => {
+        row.price = sanitizePriceInput(value)
+    }
+
+    const handlePriceBlur = (row: GoodsSkuItem) => {
+        const normalized = normalizePriceValue(row.price)
+        if (!normalized) {
+            row.price = '0'
+            return
+        }
+        if (!PRICE_PATTERN.test(normalized)) {
+            ElMessage.warning('价格格式不正确，最多保留两位小数')
+            row.price = '0'
+            return
+        }
+        row.price = normalized
+    }
+
     // SKU 生成逻辑
     const generateSkus = () => {
         const validSpecs = internalSpecifications.value.filter((s) => s.name && s.values.length > 0)
@@ -328,20 +369,35 @@
         { immediate: true },
     )
 
-    const batchSet = (field: 'price' | 'inventory') => {
-        const label = field === 'price' ? '价格 (单位:元)' : '库存'
-        ElMessageBox.prompt(`请输入统一的${label}`, '批量设置', {
+    const batchSetPrice = async () => {
+        const { value } = await ElMessageBox.prompt('请输入统一的价格 (单位:元)', '批量设置', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            inputPattern: PRICE_PATTERN,
+            inputErrorMessage: '请输入有效的价格，最多保留两位小数',
+        })
+
+        const price = normalizePriceValue(value)
+        const newList = internalSkuList.value.map((sku) => ({
+            ...sku,
+            price,
+        }))
+        internalSkuList.value = newList
+    }
+
+    const batchSetInventory = async () => {
+        const { value } = await ElMessageBox.prompt('请输入统一的库存', '批量设置', {
             confirmButtonText: '确定',
             cancelButtonText: '取消',
             inputPattern: /^\d+$/,
-            inputErrorMessage: '请输入有效的数字',
-        }).then(({ value }) => {
-            const num = parseInt(value)
-            const newList = internalSkuList.value.map((sku) => ({
-                ...sku,
-                [field]: num,
-            }))
-            internalSkuList.value = newList
+            inputErrorMessage: '请输入有效的整数库存',
         })
+
+        const inventory = Number.parseInt(value, 10)
+        const newList = internalSkuList.value.map((sku) => ({
+            ...sku,
+            inventory,
+        }))
+        internalSkuList.value = newList
     }
 </script>

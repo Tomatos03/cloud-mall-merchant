@@ -1,4 +1,4 @@
-import type { FileMeta } from './common'
+import type { FileMeta, PageResult } from './common'
 import { imagesToUrls } from '@/utils/image'
 import { http } from '@/utils/http'
 
@@ -60,6 +60,18 @@ export interface GoodsListItem {
     auditStatus?: string
 }
 
+/**
+ * SKU 分页查询项
+ */
+export interface GoodsSkuListItem {
+    skuId: string
+    goodsName: string
+    imageUrl?: string
+    price: string
+    specs: string[]
+    inventory?: number
+}
+
 export interface GoodsDetail extends GoodsExtraInfo, Omit<GoodsListItem, 'categoryIdPath'> {
     categoryPath: string
 }
@@ -74,51 +86,12 @@ export interface GoodsPageParams {
     [key: string]: string | number | boolean | undefined
 }
 
-/**
- * 分页响应结构
- */
-export interface GoodsPageResult {
-    records: GoodsListItem[]
-    total: number
-    page: number
-    pageSize: number
-}
-
-/**
- * 商品规格和SKU详情对象
- * 用于补充商品列表信息中缺失的规格和SKU数据
- */
-/**
- * 审核信息
- */
-export interface AuditGoodsVO {
-    // 审核ID
-    auditId?: string
-    // 审核状态（待审核、已通过、已拒绝等）
-    auditStatus?: string
-    // 审核拒绝原因
-    auditReason?: string
-    // 审核时间
-    auditTime?: string
-    // 待审核的商品信息（变更待审核时显示）
-    pendingGoodsInfo?: {
-        displayImageUrls?: string[]
-        descriptionImageUrls?: string[]
-        goodsName?: string
-        sellPoint?: string
-        specifications?: GoodsSpecification[]
-        skus?: GoodsSkuItem[]
-    }
-}
-
 export interface GoodsExtraInfo {
     descriptionImageUrls?: string[]
     // 商品规格列表
     specifications?: GoodsSpecification[]
     // 商品SKU列表
     skus?: GoodsSkuItem[]
-    // 审核信息
-    auditInfo?: AuditGoodsVO
 }
 
 /**
@@ -144,7 +117,15 @@ export function updateGoodsStatus(goodsId: string, status: boolean) {
  * @param params 分页查询参数
  */
 export function fetchGoodsPage(params: GoodsPageParams) {
-    return http.get<GoodsPageResult>(PREFIX, { params })
+    return http.get<PageResult<GoodsListItem>>(PREFIX, { params })
+}
+
+/**
+ * 分页查询商品 SKU 列表
+ * @param params 分页查询参数
+ */
+export function fetchGoodsSkuPage(params: GoodsPageParams) {
+    return http.get<PageResult<GoodsSkuListItem>>(`${PREFIX}/skus`, params)
 }
 
 /**
@@ -155,31 +136,7 @@ export function deleteGoods(goodsId: string) {
     return http.delete(`${PREFIX}/${goodsId}`)
 }
 
-export interface AuditRequest {
-    type: string
-    applicantId: string
-    applicantName: string
-    targetId: string | null
-}
-
-export interface GoodsAuditRequest extends AuditRequest {
-    goodsId: string | null
-    goodsName: string
-    categoryId: string
-    unitId: string
-    unitName: string
-    sellPoint: string
-    displayImageUrls: string[]
-    descriptionImageUrls: string[]
-    storeId: string
-    storeName: string
-    status: boolean
-    specifications: GoodsSpecification[]
-    skus: GoodsSkuItem[]
-    auditId?: string
-}
-
-export interface GoodsSubmitPayload {
+export interface GoodsFormData {
     goodsId?: string
     goodsName: string
     categoryId: string
@@ -193,38 +150,25 @@ export interface GoodsSubmitPayload {
     skus: GoodsSkuItem[]
 }
 
-export function toGoodsAuditRequest(
-    payload: GoodsSubmitPayload,
-    options: {
-        applicantId: string
-        applicantName: string
-        storeName: string
-        unitName: string
-        auditId?: string
-    },
-): GoodsAuditRequest {
-    return {
-        type: 'GOODS',
-        applicantId: options.applicantId,
-        applicantName: options.applicantName,
-        targetId: payload.goodsId || null,
-        goodsId: payload.goodsId || null,
+export interface GoodsSubmitPayload
+    extends Omit<GoodsFormData, 'displayImages' | 'descriptionImages'> {
+    displayImageUrls: string[]
+    descriptionImageUrls: string[]
+}
+
+export function submitGoods(payload: GoodsFormData) {
+    const request: GoodsSubmitPayload = {
+        goodsId: payload.goodsId,
         goodsName: payload.goodsName,
         categoryId: payload.categoryId,
         unitId: payload.unitId,
-        unitName: options.unitName,
         sellPoint: payload.sellPoint,
         displayImageUrls: imagesToUrls(payload.displayImages),
         descriptionImageUrls: imagesToUrls(payload.descriptionImages),
         storeId: payload.storeId,
-        storeName: options.storeName,
         status: payload.status,
         specifications: payload.specifications,
         skus: payload.skus,
-        auditId: options.auditId,
     }
-}
-
-export function submitGoodsAudit(request: GoodsAuditRequest) {
     return http.post(`${PREFIX}/publish`, request)
 }

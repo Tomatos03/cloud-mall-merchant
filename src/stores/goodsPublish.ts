@@ -3,7 +3,7 @@ import { useCategoryStore } from './category'
 import type {
     GoodsSkuItem,
     GoodsSpecification,
-    GoodsSubmitPayload,
+    GoodsFormData,
     GoodsListItem,
     GoodsExtraInfo,
 } from '@/api/goods'
@@ -47,8 +47,7 @@ export type PublishStepIndex = PublishStep
  * 匹配后端 API 期望的 displayImageUrls 和 descriptionUrls 字段。
  */
 export interface GoodsPublishState {
-    // 发布表单数据（内部使用 Image[] 对象，提交时转换为 string[]）
-    formData: GoodsSubmitPayload
+    formData: GoodsFormData
     // 当前活动步骤
     activeStep: PublishStep
     // 是否正在提交
@@ -116,7 +115,7 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
     },
 
     actions: {
-        updateFormData(data: Partial<GoodsSubmitPayload>) {
+        updateFormData(data: Partial<GoodsFormData>) {
             this.formData = {
                 ...this.formData,
                 ...data,
@@ -128,7 +127,7 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
         /**
          * 设置表单数据（用于初始化或完全替换）
          */
-        setFormData(data: GoodsSubmitPayload) {
+        setFormData(data: GoodsFormData) {
             this.loading = true
             try {
                 this.formData = {
@@ -156,7 +155,7 @@ export const useGoodsPublishStore = defineStore('goodsPublish', {
             data: {
                 auditId: string
                 auditStatus: AuditStatus
-            } & GoodsSubmitPayload,
+            } & GoodsFormData,
         ) {
             this.setCurrentAuditId(data.auditId)
             this.setActiveStep(PublishStep.WRITE_INFO)

@@ -1,26 +1,5 @@
 <template>
     <div class="step2-container">
-        <!-- 页面状态提示条 -->
-        <div
-            v-if="showStatusHint && hintConfig"
-            :class="[
-                'mb-6 px-5 py-4 rounded-lg border-l-4 flex items-start gap-3',
-                hintConfig.containerClass,
-            ]"
-        >
-            <el-icon :class="hintConfig.iconClass + ' mt-0.5 shrink-0'">
-                <component :is="hintConfig.icon" />
-            </el-icon>
-            <div class="flex-1 min-w-0">
-                <div :class="hintConfig.titleClass + ' font-semibold mb-1'">
-                    {{ hintConfig.title }}
-                </div>
-                <div :class="hintConfig.textClass + ' text-sm leading-relaxed'">
-                    {{ hintConfig.message }}
-                </div>
-            </div>
-        </div>
-
         <el-form
             :model="publishStore.formData"
             :rules="rules"
@@ -261,14 +240,7 @@
 
 <script setup lang="ts">
     import { ref, computed, onMounted } from 'vue'
-    import {
-        Plus,
-        ZoomIn,
-        Delete,
-        InfoFilled,
-        WarningFilled,
-        EditPen,
-    } from '@element-plus/icons-vue'
+    import { Plus, ZoomIn, Delete, InfoFilled } from '@element-plus/icons-vue'
     import draggable from 'vuedraggable'
     import { ElMessage, ElMessageBox, ElNotification, type UploadFile } from 'element-plus'
     import { useGoodsPublishStore } from '@/stores/goodsPublish'
@@ -276,20 +248,8 @@
     import SkuSpecification from './SkuSpecification.vue'
     import { uploadImage, type FileMeta } from '@/api/common'
     import type { CategoryNode } from '@/api/category'
-    import { AuditStatus } from '@/views/audit/types'
     import type { Unit } from '@/api/unit'
     import { urlsToImages } from '@/utils/image'
-
-    // 提示条配置
-    interface HintConfig {
-        title: string
-        message: string
-        icon: unknown
-        containerClass: string
-        iconClass: string
-        titleClass: string
-        textClass: string
-    }
 
     interface Props {
         categoryTree: CategoryNode[]
@@ -365,63 +325,6 @@
             },
         ],
     }
-
-    const hintConfigMap: Record<string, HintConfig> = {
-        // 场景1: 编辑已有商品
-        edit: {
-            title: '正在编辑商品',
-            message: '您正在编辑已有的商品，修改后需要重新提交审核',
-            icon: EditPen,
-            containerClass: 'border-blue-500 bg-blue-100',
-            iconClass: 'text-blue-600',
-            titleClass: 'text-blue-900',
-            textClass: 'text-blue-800',
-        },
-        // 场景2: 审核被拒绝，需要整改重新发布
-        rejected: {
-            title: '正在重新编辑审核未通过的商品',
-            message: '您的商品审核未通过，请根据平台反馈调整内容后再次提交',
-            icon: WarningFilled,
-            containerClass: 'border-red-500 bg-red-50',
-            iconClass: 'text-red-600',
-            titleClass: 'text-red-900',
-            textClass: 'text-red-800',
-        },
-        // 场景3: 审核被撤销，需要重新发布
-        revoked: {
-            title: '正在编辑已撤销审核的商品',
-            message: '您已撤回审核申请，可以调整内容后重新提交',
-            icon: InfoFilled,
-            containerClass: 'border-amber-500 bg-amber-50',
-            iconClass: 'text-amber-600',
-            titleClass: 'text-amber-900',
-            textClass: 'text-amber-800',
-        },
-    }
-
-    // 判断当前场景
-    const currentHintType = computed(() => {
-        if (publishStore.isRepublish && publishStore.currentAuditStatus === AuditStatus.REJECTED) {
-            return 'rejected' // 审核被拒绝
-        }
-        if (publishStore.isRepublish && publishStore.currentAuditStatus === AuditStatus.REVOKED) {
-            return 'revoked' // 审核被撤销
-        }
-        if (publishStore.isEdit) {
-            return 'edit' // 编辑已有商品
-        }
-        return null
-    })
-
-    // 是否显示提示
-    const showStatusHint = computed(() => {
-        return !!currentHintType.value
-    })
-
-    // 获取当前提示配置
-    const hintConfig = computed(() => {
-        return hintConfigMap[currentHintType.value || 'edit']
-    })
 
     // 图片预览
     const handlePictureCardPreview = (file: FileMeta) => {

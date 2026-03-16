@@ -42,7 +42,7 @@
     import StepProgress from './modules/StepProgress.vue'
     import { useUnitStore } from '@/stores/unit'
     import { useUserStore } from '@/stores/user'
-    import { submitGoodsAudit, toGoodsAuditRequest } from '@/api/goods'
+    import { submitGoods } from '@/api/goods'
     import { onMounted } from 'vue'
     import { useCategoryStore } from '@/stores/category'
 
@@ -76,18 +76,7 @@
             }
 
             publishStore.formData.storeId = userStore.storeId
-
-            const unitName = unitStore.getUnitName(publishStore.formData.unitId)
-
-            const request = toGoodsAuditRequest(publishStore.formData, {
-                applicantId: userStore.uid,
-                applicantName: userStore.displayName,
-                storeName: userStore.storeName,
-                unitName,
-                auditId: publishStore.currentAuditId,
-            })
-
-            await submitGoodsAudit(request)
+            await submitGoods(publishStore.formData)
             publishStore.nextStep()
         } finally {
             publishStore.setSubmitting(false)

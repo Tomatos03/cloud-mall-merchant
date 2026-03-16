@@ -34,7 +34,7 @@
                         style="width: 120px"
                     >
                         <el-option
-                            v-for="(item, key) in ActivityStatusMap"
+                            v-for="(item, key) in SeckillActivityStatusMap"
                             :key="key"
                             :label="item.label"
                             :value="Number(key)"
@@ -62,36 +62,26 @@
                     <div class="text-gray-600">
                         <div>{{ row.activityDate }}</div>
                         <div class="text-xs text-gray-400">
-                            {{ row.startTime }} ~ {{ row.endTime }}
+                            {{ formatHourRange(row.startHour) }}
                         </div>
                     </div>
                 </template>
 
                 <template #status="{ row }">
-                    <el-tag :type="ActivityStatusMap[row.status]?.type" effect="dark">
-                        {{ ActivityStatusMap[row.status]?.label }}
+                    <el-tag :type="getActivityStatusMeta(row.status).type" effect="dark">
+                        {{ getActivityStatusMeta(row.status).label }}
                     </el-tag>
                 </template>
 
                 <template #items="{ row }">
                     <span class="text-gray-600">
-                        {{ row.passedItems }}
-                        <span v-if="row.maxItems"> / {{ row.maxItems }}</span>
+                        {{ row.maxItems ?? '-' }}
                     </span>
                 </template>
 
                 <template #action="{ row }">
                     <el-button link type="primary" size="small" @click="onView(row)">
-                        查看
-                    </el-button>
-                    <el-button
-                        v-if="row.status === ActivityStatus.APPLYING"
-                        link
-                        type="primary"
-                        size="small"
-                        @click="onApply(row)"
-                    >
-                        申请加入
+                        查看详情
                     </el-button>
                 </template>
             </Table>
@@ -119,10 +109,10 @@
     import { Search, RefreshRight } from '@element-plus/icons-vue'
     import Table from '@/components/table/Table.vue'
     import {
-        fetchActivityList,
-        ActivityStatus,
-        ActivityStatusMap,
-        type SeckillActivityItem,
+        fetchSeckillActivities,
+        SeckillActivityStatus,
+        SeckillActivityStatusMap,
+        type SeckillActivityVO,
     } from '@/api/seckill'
 
     const router = useRouter()
@@ -131,10 +121,10 @@
         { id: '1', label: '活动名称', key: 'name', minWidth: 150 },
         { id: '2', label: '活动时间', key: 'activityTime', minWidth: 180 },
         { id: '3', label: '状态', key: 'status', width: 100 },
-        { id: '4', label: '商品数', key: 'items', width: 100 },
+        { id: '4', label: '最大商品数量', key: 'items', width: 150 },
     ]
 
-    const data = ref<SeckillActivityItem[]>([])
+    const data = ref<SeckillActivityVO[]>([])
     const page = ref(1)
     const pageSize = ref(10)
     const total = ref(0)
@@ -145,7 +135,7 @@
     const loadData = async () => {
         loading.value = true
         try {
-            const res = await fetchActivityList({
+            const res = await fetchSeckillActivities({
                 page: page.value,
                 pageSize: pageSize.value,
                 name: searchName.value || undefined,
@@ -181,12 +171,23 @@
         loadData()
     }
 
-    const onView = (row: SeckillActivityItem) => {
+    const onView = (row: SeckillActivityVO) => {
         router.push(`/seckill/activities/${row.id}`)
     }
 
-    const onApply = (row: SeckillActivityItem) => {
-        router.push(`/seckill/apply/${row.id}`)
+    const getActivityStatusMeta = (status: unknown): { label: string; type: string } => {
+        const safeStatus =
+            typeof status === 'number' && status in SeckillActivityStatusMap
+                ? (status as SeckillActivityStatus)
+                : SeckillActivityStatus.APPLYING
+
+        return SeckillActivityStatusMap[safeStatus]
+    }
+
+    const formatHourRange = (startHour: number): string => {
+        const start = String(startHour).padStart(2, '0')
+        const end = String((startHour + 1) % 24).padStart(2, '0')
+        return `${start}:00 ~ ${end}:00`
     }
 
     onMounted(() => {

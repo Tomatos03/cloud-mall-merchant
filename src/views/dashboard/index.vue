@@ -6,10 +6,10 @@
         <!-- 快捷入口、消息中心与待办事项 -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <QuickEntries />
-            <RecentMessages
+            <!-- <RecentMessages
                 :chat-sessions="recentChatSessions"
                 @message-click="handleMessageClick"
-            />
+            /> -->
             <TodoList :todos="todos" />
         </div>
 
@@ -29,11 +29,10 @@
 </template>
 
 <script setup lang="ts">
-    import { ref, onMounted, computed } from 'vue'
-    import { useRouter } from 'vue-router'
+    import { ref, onMounted } from 'vue'
     import SummaryCards from './modules/SummaryCards.vue'
     import QuickEntries from './modules/QuickEntries.vue'
-    import RecentMessages from './modules/RecentMessages.vue'
+    // import RecentMessages from './modules/RecentMessages.vue'
     import TodoList from './modules/TodoList.vue'
     import SalesTrendChart from './modules/SalesTrendChart.vue'
     import CategoryRatioChart from './modules/CategoryRatioChart.vue'
@@ -45,10 +44,10 @@
         DashboardData,
     } from '@/api/dashboard'
     import { getDashboardData, getSalesTrend } from '@/api/dashboard'
-    import { useImStore } from '@/stores/im'
+    // import { useImStore } from '@/stores/im'
 
-    const router = useRouter()
-    const imStore = useImStore()
+    // const router = useRouter()
+    // const imStore = useImStore()
 
     // 状态管理
     const loading = ref(false)
@@ -58,9 +57,9 @@
     const categoryData = ref<CategoryRatio[]>([])
 
     // 从 store 获取最近的 5 条聊天会话
-    const recentChatSessions = computed(() => {
-        return imStore.chatSessions.slice(0, 5)
-    })
+    // const recentChatSessions = computed(() => {
+    //     return imStore.chatSessions.slice(0, 5)
+    // })
 
     // 获取仪表板数据
     const fetchAllData = async () => {
@@ -91,17 +90,17 @@
         { id: 3, tag: '售后', content: '收到 1 个新的退款申请', type: 'info' },
     ])
 
-    const handleMessageClick = async (sessionId: number) => {
-        router.push({
-            name: 'IM',
-        })
-        imStore.selectSessionAndMarkRead(sessionId)
-    }
+    // const handleMessageClick = async (sessionId: number) => {
+    //     router.push({
+    //         name: 'IM',
+    //     })
+    //     imStore.selectSessionAndMarkRead(sessionId)
+    // }
 
     onMounted(async () => {
         await fetchAllData()
-        await imStore.fetchChatSessions()
-        imStore.initializeIM()
+        // await imStore.fetchChatSessions()
+        // imStore.initializeIM()
     })
 </script>
 
