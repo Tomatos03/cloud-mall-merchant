@@ -13,7 +13,7 @@
                     <el-icon :size="20"><ShoppingTrolley /></el-icon>
                 </div>
                 <h1 class="text-lg font-black tracking-tight text-gray-800 uppercase">
-                    Online Shop
+                    {{ appTitle }}
                 </h1>
             </div>
 
@@ -102,6 +102,7 @@
 
     const route = useRoute()
     const router = useRouter()
+    const appTitle = import.meta.env.VITE_APP_TITLE ?? 'OnLineShop'
 
     /**
      * 从路由定义生成菜单项

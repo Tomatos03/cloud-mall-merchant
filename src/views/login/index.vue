@@ -2,7 +2,7 @@
     <div class="flex min-h-screen bg-[#f4f7fe]">
         <!-- 左侧：品牌展示区 -->
         <div
-            class="hidden lg:flex lg:w-1/2 bg-linear-to-br from-[#409eff] to-[#337ecc] p-12 flex-col justify-between text-white relative overflow-hidden z-10 shadow-[10px_0_40px_rgba(0,0,0,0.1)]"
+            class="hidden lg:flex lg:w-1/2 bg-linear-to-br from-[#409eff] via-[#409eff] to-[#337ecc] p-12 flex-col justify-between text-white relative overflow-hidden z-10 shadow-[10px_0_40px_rgba(0,0,0,0.1)]"
         >
             <!-- 装饰性背景元素 -->
             <div
@@ -10,6 +10,9 @@
             ></div>
             <div
                 class="absolute bottom-[-5%] left-[-5%] w-96 h-96 bg-black/10 rounded-full blur-3xl"
+            ></div>
+            <div
+                class="absolute top-[28%] right-[5%] w-32 h-32 rounded-3xl rotate-12 border border-white/15 bg-white/5"
             ></div>
 
             <div class="relative z-10">
@@ -19,24 +22,36 @@
                     >
                         <el-icon :size="24" color="#409eff"><Shop /></el-icon>
                     </div>
-                    <span class="text-2xl font-bold tracking-wider">Online Shop</span>
+                    <span class="text-2xl font-bold tracking-wider">{{ appTitle }}</span>
                 </div>
 
                 <div class="mt-20">
                     <h1 class="text-5xl font-extrabold mb-6 leading-tight drop-shadow-lg">
-                        管理您的业务<br />
-                        <span class="text-blue-100">从未如此简单</span>
+                        专注商家经营<br />
+                        <span class="text-blue-100">每个环节都可掌控</span>
                     </h1>
                     <p
                         class="text-lg text-blue-50 max-w-md leading-relaxed opacity-90 drop-shadow-md"
                     >
-                        集成化的电商管理平台，为您提供实时数据分析、订单追踪及高效的库存管理方案。
+                        面向商家团队的运营控制台，统一处理商品、订单、履约与结算，帮助您更快响应业务变化。
                     </p>
+                </div>
+
+                <div class="mt-10 flex flex-wrap gap-3 text-sm">
+                    <span class="px-3 py-1.5 rounded-full bg-white/15 border border-white/20"
+                        >商品经营</span
+                    >
+                    <span class="px-3 py-1.5 rounded-full bg-white/15 border border-white/20"
+                        >订单履约</span
+                    >
+                    <span class="px-3 py-1.5 rounded-full bg-white/15 border border-white/20"
+                        >数据看板</span
+                    >
                 </div>
             </div>
 
-            <div class="relative z -10 flex items-center gap-6 text-sm text-blue-100/80">
-                <span>© 2024 Cloud Mall Platform</span>
+            <div class="relative z-10 flex items-center gap-6 text-sm text-blue-100/80">
+                <span>© 2026 Cloud Mall Merchant Console</span>
                 <div class="w-1 h-1 bg-blue-100/40 rounded-full"></div>
                 <span>隐私政策</span>
                 <div class="w-1 h-1 bg-blue-100/40 rounded-full"></div>
@@ -51,8 +66,8 @@
             <div class="w-full max-w-105">
                 <!-- 顶部标题 -->
                 <div class="flex flex-col items-center lg:items-start mb-12">
-                    <h2 class="text-4xl font-bold text-gray-800 mb-4">账号登录</h2>
-                    <p class="text-gray-500 text-lg">欢迎使用 Online Shop 后台管理系统</p>
+                    <h2 class="text-4xl font-bold text-gray-800 mb-4">商家中心登录</h2>
+                    <p class="text-gray-500 text-lg">欢迎进入 {{ appTitle }} 管理后台</p>
                 </div>
 
                 <!-- 登录表单 -->
@@ -62,20 +77,20 @@
                     size="large"
                     @keyup.enter="submitLoginForm"
                 >
-                    <el-form-item label="用户名">
+                    <el-form-item label="商家账号">
                         <el-input
                             v-model="loginForm.username"
-                            placeholder="请输入用户名"
+                            placeholder="请输入商家账号"
                             :prefix-icon="User"
                             class="custom-input"
                         />
                     </el-form-item>
 
-                    <el-form-item label="密码">
+                    <el-form-item label="登录密码">
                         <el-input
                             v-model="loginForm.password"
                             type="password"
-                            placeholder="请输入密码"
+                            placeholder="请输入登录密码"
                             :prefix-icon="Lock"
                             show-password
                             class="custom-input"
@@ -83,7 +98,7 @@
                     </el-form-item>
 
                     <div class="flex justify-between items-center mb-8">
-                        <el-checkbox v-model="rememberMe" label="记住我" />
+                        <el-checkbox v-model="rememberMe" label="7天内免登录" />
                     </div>
 
                     <el-button
@@ -92,7 +107,7 @@
                         class="login-btn w-full h-14! rounded-xl! font-bold text-lg tracking-[2px]"
                         :loading="loading"
                     >
-                        立即登录
+                        进入商家中心
                     </el-button>
                 </el-form>
             </div>
@@ -116,6 +131,7 @@
 
     const loading = ref(false)
     const rememberMe = ref(false)
+    const appTitle = import.meta.env.VITE_APP_TITLE ?? 'OnLineShop'
 
     const loginForm = reactive<LoginForm>({
         username: '',
@@ -202,17 +218,6 @@
         box-shadow: 0 4px 10px rgba(64, 158, 255, 0.2);
     }
 
-    .register-link {
-        font-weight: 600 !important;
-        color: #409eff !important;
-        transition: all 0.3s;
-    }
-
-    .register-link:hover {
-        color: #337ecc !important;
-        text-decoration: underline;
-    }
-
     :deep(.el-checkbox__label) {
         color: #718096;
         font-weight: 500;
@@ -226,5 +231,10 @@
         border-radius: 4px;
         width: 16px;
         height: 16px;
+    }
+
+    :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
+        border-color: #409eff;
+        background-color: #409eff;
     }
 </style>

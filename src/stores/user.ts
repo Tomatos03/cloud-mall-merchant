@@ -66,6 +66,6 @@ export const useUserStore = defineStore('user', {
     // persist 配置用于状态持久化（依赖 pinia-plugin-persistedstate 插件）
     // persist: true,
     persist: {
-        key: import.meta.env.VITE_PROJECT_NAME + '-USER', // 需在 .env 文件里配置 VITE_PROJECT_NAME
+        key: 'MERCHANT-USER',
     },
 })

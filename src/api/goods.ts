@@ -116,8 +116,8 @@ export function updateGoodsStatus(goodsId: string, status: boolean) {
  * 分页查询商品列表
  * @param params 分页查询参数
  */
-export function fetchGoodsPage(params: GoodsPageParams) {
-    return http.get<PageResult<GoodsListItem>>(PREFIX, { params })
+export function pageGoods(params: GoodsPageParams) {
+    return http.get<PageResult<GoodsListItem>>(PREFIX, { ...params })
 }
 
 /**

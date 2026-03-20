@@ -126,7 +126,7 @@
     import {
         getGoodsSpecsAndSkus,
         updateGoodsStatus,
-        fetchGoodsPage,
+        pageGoods,
         deleteGoods,
     } from '@/api/goods'
     import { formatPrice } from '@/utils/money'
@@ -160,7 +160,7 @@
     const loadData = async () => {
         loading.value = true
         try {
-            const res = await fetchGoodsPage({
+            const res = await pageGoods({
                 page: page.value,
                 pageSize: pageSize.value,
                 status: publishStatus.value,

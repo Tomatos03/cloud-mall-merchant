@@ -59,6 +59,9 @@ export enum OrderStatus {
     CLOSED = 'CLOSED',
 }
 
+export const ORDER_STATUS_ALL = 'ALL' as const
+export type OrderStatusFilter = OrderStatus | typeof ORDER_STATUS_ALL
+
 // ============ 类型定义 ============
 
 /**
@@ -82,7 +85,7 @@ export interface OrderStoreItem {
     orderNo: string // 子订单号
     storeId: string // 店铺ID
     storeName: string // 店铺名称
-    status: string // 订单状态
+    status: OrderStatus // 订单状态
     items: OrderGoodsItem[] // 商品列表
     totalPrice: string // 该店铺订单总价（单位：元）
     count: number // 商品总数
@@ -93,7 +96,7 @@ export interface OrderStoreItem {
  */
 export interface OrderDetail {
     orderNo: string // 主订单号
-    status: string // 订单状态
+    status: OrderStatus // 订单状态
     createTime: string // 下单时间
     storeOrders: OrderStoreItem[] // 店铺订单列表
     totalPrice: string // 订单总价（单位：元）
@@ -104,7 +107,7 @@ export interface OrderDetail {
  */
 export interface OrderItem {
     orderNo: string // 订单号
-    orderStatus: string // 订单状态
+    orderStatus: OrderStatus // 订单状态
     orderType: OrderType // 订单类型
     createTime: string // 下单时间
     goodsNum: number // 商品数量
@@ -120,7 +123,7 @@ export interface OrderItem {
  * 订单状态映射
  */
 export const OrderStatusMap: Record<
-    string,
+    OrderStatus,
     { label: string; type: 'warning' | 'primary' | 'success' | 'info' | 'danger' }
 > = {
     CREATED: { label: '等待买家付款', type: 'warning' },
@@ -164,7 +167,7 @@ export function getOrderTypeLabel(orderType: OrderType): string {
 export interface OrderPageParams {
     page: number
     pageSize: number
-    status?: string // 订单状态（可选）
+    status?: OrderStatus // 订单状态（可选）
     [key: string]: string | number | undefined
 }
 
@@ -185,7 +188,7 @@ export interface OrderPageResult {
  * @param params 分页查询参数
  */
 export function fetchOrderPage(params: OrderPageParams) {
-    return http.get<OrderPageResult>(`${PREFIX}/page`, { params })
+    return http.get<OrderPageResult>(`${PREFIX}/page`, { ...params })
 }
 
 /**

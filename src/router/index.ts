@@ -6,7 +6,7 @@ import {
     Shop,
     Goods,
     ShoppingCart,
-    Timer,
+    // Timer,
     DocumentCopy,
 } from '@element-plus/icons-vue'
 
@@ -71,12 +71,12 @@ const router = createRouter({
                         },
                     ],
                 },
-                // 审核列表
+                // 审核中心
                 {
                     path: 'audit',
                     name: 'Audit',
                     component: () => import('@/views/audit/index.vue'),
-                    meta: { title: '审核列表', icon: DocumentCopy },
+                    meta: { title: '审核中心', icon: DocumentCopy },
                 },
                 // 订单管理
                 {
@@ -86,18 +86,18 @@ const router = createRouter({
                     meta: { title: '订单管理', icon: ShoppingCart },
                 },
                 // 秒杀活动
-                {
-                    path: 'seckill',
-                    name: 'SeckillActivities',
-                    component: () => import('@/views/seckill/activities/index.vue'),
-                    meta: { title: '秒杀活动', icon: Timer },
-                },
-                {
-                    path: 'seckill/activities/:id',
-                    name: 'SeckillActivityDetail',
-                    component: () => import('@/views/seckill/activities/detail.vue'),
-                    meta: { title: '秒杀活动详细', hidden: true },
-                },
+                // {
+                //     path: 'seckill',
+                //     name: 'SeckillActivities',
+                //     component: () => import('@/views/seckill/activities/index.vue'),
+                //     meta: { title: '秒杀活动', icon: Timer },
+                // },
+                // {
+                //     path: 'seckill/activities/:id',
+                //     name: 'SeckillActivityDetail',
+                //     component: () => import('@/views/seckill/activities/detail.vue'),
+                //     meta: { title: '秒杀活动详细', hidden: true },
+                // },
             ],
         },
         {

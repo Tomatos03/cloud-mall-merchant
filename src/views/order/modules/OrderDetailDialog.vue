@@ -95,7 +95,7 @@
 <script setup lang="ts">
     import { ref, watch, computed } from 'vue'
     import { Loading } from '@element-plus/icons-vue'
-    import type { OrderItem, OrderDetail, OrderStatus } from '@/api/order'
+    import type { OrderItem, OrderDetail } from '@/api/order'
     import { getOrderStatusInfo, fetchOrderDetail } from '@/api/order'
     import OrderGoodsList from './OrderGoodsList.vue'
     import { formatPrice } from '@/utils/money'
@@ -149,11 +149,7 @@
             if (!orderDetail.value) {
                 return { label: '-', type: 'info' as const }
             }
-
-            // 状态转换为 OrderStatus 类型
-            const status = orderDetail.value.status as OrderStatus
-
-            return getOrderStatusInfo(status)
+            return getOrderStatusInfo(orderDetail.value.status)
         }
     })
 

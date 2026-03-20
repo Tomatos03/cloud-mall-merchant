@@ -93,8 +93,9 @@
     import Table from '@/components/table/Table.vue'
     import OrderFilter from './modules/OrderFilter.vue'
     import OrderDetailDialog from './modules/OrderDetailDialog.vue'
-    import type { OrderItem, OrderPageParams } from '@/api/order'
+    import type { OrderItem, OrderPageParams, OrderStatusFilter } from '@/api/order'
     import {
+        ORDER_STATUS_ALL,
         OrderType,
         OrderStatus,
         getOrderTypeLabel,
@@ -107,7 +108,7 @@
     import { formatPrice } from '@/utils/money'
 
     const columns = [
-        { id: '1', label: '订单号', key: 'orderNo' },
+        { id: '1', label: '订单号', key: 'orderNo', minWidth: 200 },
         { id: '2', label: '订单类型', key: 'orderType' },
         { id: '4', label: '总价', key: 'totalPrice' },
         { id: '5', label: '买家', key: 'buyerName' },
@@ -123,7 +124,7 @@
     const total = ref(0)
     const detailDialogVisible = ref(false)
     const selectedOrder = ref<OrderItem | undefined>()
-    const selectedStatus = ref<string>('ALL')
+    const selectedStatus = ref<OrderStatusFilter>(ORDER_STATUS_ALL)
 
     /**
      * 根据订单类型获取标签类型
@@ -147,13 +148,13 @@
             pageSize: pageSize.value,
         }
 
-        if (selectedStatus.value !== 'ALL') {
+        if (selectedStatus.value !== ORDER_STATUS_ALL) {
             params.status = selectedStatus.value
         }
 
         const res = await fetchOrderPage(params)
         data.value = res.data.records
-        total.value = Number(res.data.total) || 0
+        total.value = Number(res.data.total ?? 0)
     }
 
     const handlePageChange = (val: number) => {
@@ -173,7 +174,7 @@
     }
 
     const handleReset = () => {
-        selectedStatus.value = 'ALL'
+        selectedStatus.value = ORDER_STATUS_ALL
         page.value = 1
         loadData()
     }

@@ -4,14 +4,14 @@
         <SummaryCards :summary-data="summaryData" />
 
         <!-- 快捷入口、消息中心与待办事项 -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <!-- <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <QuickEntries />
-            <!-- <RecentMessages
+             <RecentMessages
                 :chat-sessions="recentChatSessions"
                 @message-click="handleMessageClick"
-            /> -->
+            />
             <TodoList :todos="todos" />
-        </div>
+        </div> -->
 
         <!-- 销售趋势与分类占比 -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -31,9 +31,9 @@
 <script setup lang="ts">
     import { ref, onMounted } from 'vue'
     import SummaryCards from './modules/SummaryCards.vue'
-    import QuickEntries from './modules/QuickEntries.vue'
+    // import QuickEntries from './modules/QuickEntries.vue'
     // import RecentMessages from './modules/RecentMessages.vue'
-    import TodoList from './modules/TodoList.vue'
+    // import TodoList from './modules/TodoList.vue'
     import SalesTrendChart from './modules/SalesTrendChart.vue'
     import CategoryRatioChart from './modules/CategoryRatioChart.vue'
     import TopProductsTable from './modules/TopProductsTable.vue'
@@ -84,11 +84,11 @@
     }
 
     // 静态待办数据
-    const todos = ref([
-        { id: 1, tag: '待发货', content: '您有 5 个新订单待发货', type: 'warning' },
-        { id: 2, tag: '库存预警', content: '3 个商品库存不足 10 件', type: 'danger' },
-        { id: 3, tag: '售后', content: '收到 1 个新的退款申请', type: 'info' },
-    ])
+    // const todos = ref([
+    //     { id: 1, tag: '待发货', content: '您有 5 个新订单待发货', type: 'warning' },
+    //     { id: 2, tag: '库存预警', content: '3 个商品库存不足 10 件', type: 'danger' },
+    //     { id: 3, tag: '售后', content: '收到 1 个新的退款申请', type: 'info' },
+    // ])
 
     // const handleMessageClick = async (sessionId: number) => {
     //     router.push({

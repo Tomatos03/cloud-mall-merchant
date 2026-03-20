@@ -11,12 +11,12 @@
                     class="custom-select"
                     style="width: 160px"
                 >
-                    <el-option label="全部状态" value="ALL" />
+                    <el-option label="全部状态" :value="ORDER_STATUS_ALL" />
                     <el-option
-                        v-for="(item, key) in OrderStatusMap"
-                        :key="key"
-                        :label="item.label"
-                        :value="key"
+                        v-for="item in statusOptions"
+                        :key="item"
+                        :label="OrderStatusMap[item].label"
+                        :value="item"
                     />
                 </el-select>
             </div>
@@ -37,17 +37,20 @@
 <script setup lang="ts">
     import { computed } from 'vue'
     import { RefreshRight } from '@element-plus/icons-vue'
-    import { OrderStatusMap } from '@/api/order'
+    import type { OrderStatusFilter } from '@/api/order'
+    import { ORDER_STATUS_ALL, OrderStatus, OrderStatusMap } from '@/api/order'
 
     const props = defineProps<{
-        modelValue: string
+        modelValue: OrderStatusFilter
     }>()
 
     const emit = defineEmits<{
-        'update:modelValue': [value: string]
+        'update:modelValue': [value: OrderStatusFilter]
         'change': []
         'reset': []
     }>()
+
+    const statusOptions = Object.values(OrderStatus)
 
     const status = computed({
         get: () => props.modelValue,

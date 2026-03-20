@@ -2,7 +2,7 @@
     <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-lg font-bold text-gray-800">商品销量排行 Top 10</h3>
-            <el-button link type="primary" @click="handleViewFullReport">查看完整报表</el-button>
+            <!-- <el-button link type="primary" @click="handleViewFullReport">查看完整报表</el-button> -->
         </div>
         <el-table
             :data="topProducts"
@@ -59,16 +59,16 @@
         topProducts: TopProduct[]
     }
 
-    interface Emits {
-        (e: 'view-report'): void
-    }
+    // interface Emits {
+    //     (e: 'view-report'): void
+    // }
 
     defineProps<Props>()
-    const emit = defineEmits<Emits>()
+    // const emit = defineEmits<Emits>()
 
-    const handleViewFullReport = () => {
-        emit('view-report')
-    }
+    // const handleViewFullReport = () => {
+    //     emit('view-report')
+    // }
 </script>
 
 <style scoped>
